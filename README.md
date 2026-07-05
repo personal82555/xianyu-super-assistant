@@ -4,6 +4,26 @@
 
 ---
 
+## 📸 界面预览
+
+| 登录页面 | 数据看板 |
+|:---:|:---:|
+| ![登录页面](screenshots/login.png) | ![数据看板](screenshots/dashboard.png) |
+
+| 账号管理 | 关键词管理 |
+|:---:|:---:|
+| ![账号管理](screenshots/accounts.png) | ![关键词管理](screenshots/keywords.png) |
+
+| 商品管理 | 订单管理 |
+|:---:|:---:|
+| ![商品管理](screenshots/items.png) | ![订单管理](screenshots/orders.png) |
+
+| 通知设置 | 实时日志 |
+|:---:|:---:|
+| ![通知设置](screenshots/notifications.png) | ![实时日志](screenshots/logs.png) |
+
+---
+
 ## ✨ 核心功能
 
 ### 🤖 智能自动回复
