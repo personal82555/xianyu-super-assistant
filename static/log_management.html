@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日志管理 - 闲鱼自动回复系统</title>
+    <link href="/static/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        .log-container {
+            background: #1e1e1e;
+            color: #f8f9fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            max-height: 600px;
+            overflow-y: auto;
+            border-radius: 0.375rem;
+        }
+        .log-line {
+            padding: 0.25rem 0.5rem;
+            border-bottom: 1px solid #333;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .log-line:hover {
+            background: #2d2d2d;
+        }
+        .log-info { color: #17a2b8; }
+        .log-warning { color: #ffc107; }
+        .log-error { color: #dc3545; }
+        .log-debug { color: #6c757d; }
+        .filter-badge {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-badge:hover {
+            transform: scale(1.05);
+        }
+        .filter-badge.active {
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+        }
+        .auto-refresh-indicator {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-robot"></i> 闲鱼自动回复系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="bi bi-house"></i> 首页
+                </a>
+                <a class="nav-link" href="/user_management.html">
+                    <i class="bi bi-people"></i> 用户管理
+                </a>
+                <a class="nav-link" href="/data_management.html">
+                    <i class="bi bi-database"></i> 数据管理
+                </a>
+                <a class="nav-link active" href="/log_management.html">
+                    <i class="bi bi-file-text"></i> 日志管理
+                </a>
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 管理员标题 -->
+    <div class="admin-header">
+        <div class="container">
+            <h1 class="mb-0">
+                <i class="bi bi-file-text"></i> 日志管理
+            </h1>
+            <p class="mb-0 mt-2">查看和监控系统运行日志</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 控制面板 -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-sliders"></i> 日志控制
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <label class="form-label">显示行数</label>
+                        <select class="form-select" id="logLines" onchange="loadLogs()">
+                            <option value="50">50行</option>
+                            <option value="100" selected>100行</option>
+                            <option value="200">200行</option>
+                            <option value="500">500行</option>
+                            <option value="1000">1000行</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">日志级别过滤</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="badge bg-secondary filter-badge active" data-level="" onclick="filterByLevel('')">
+                                全部
+                            </span>
+                            <span class="badge bg-info filter-badge log-info" data-level="info" onclick="filterByLevel('info')">
+                                INFO
+                            </span>
+                            <span class="badge bg-warning filter-badge log-warning" data-level="warning" onclick="filterByLevel('warning')">
+                                WARNING
+                            </span>
+                            <span class="badge bg-danger filter-badge log-error" data-level="error" onclick="filterByLevel('error')">
+                                ERROR
+                            </span>
+                            <span class="badge bg-secondary filter-badge log-debug" data-level="debug" onclick="filterByLevel('debug')">
+                                DEBUG
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">自动刷新</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="autoRefresh" onchange="toggleAutoRefresh()">
+                            <label class="form-check-label" for="autoRefresh">
+                                <span id="autoRefreshLabel">关闭</span>
+                                <i id="autoRefreshIcon" class="bi bi-circle" style="display: none;"></i>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button class="btn btn-primary" onclick="loadLogs()">
+                                <i class="bi bi-arrow-clockwise"></i> 刷新
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志信息 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> 日志信息
+                </h5>
+                <small class="text-muted" id="lastUpdate">最后更新: -</small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>日志文件:</strong>
+                        <span id="logFile" class="text-muted">-</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>显示行数:</strong>
+                        <span id="displayLines" class="text-muted">-</span>
+                    </div>
+                    <div class="col-md-4">
+                        <strong>当前过滤:</strong>
+                        <span id="currentFilter" class="text-muted">全部</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志内容 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-terminal"></i> 日志内容
+                </h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="scrollToTop()">
+                        <i class="bi bi-arrow-up"></i> 顶部
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="scrollToBottom()">
+                        <i class="bi bi-arrow-down"></i> 底部
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="loadingLogs" class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载日志...</p>
+                </div>
+                <div id="logContainer" class="log-container" style="display: none;"></div>
+                <div id="noLogs" class="text-center py-4" style="display: none;">
+                    <i class="bi bi-file-text" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="mt-2 text-muted">暂无日志数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/lib/bootstrap/bootstrap.bundle.min.js"></script>
+    <script>
+        let autoRefreshInterval = null;
+        let currentLevel = '';
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查管理员权限
+            checkAdminPermission();
+            
+            // 加载日志
+            loadLogs();
+        });
+
+        // 检查管理员权限
+        function checkAdminPermission() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                alert('请先登录');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 验证token并检查是否为管理员
+            fetch('/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    alert('登录已过期，请重新登录');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                // 检查是否为管理员
+                if (data.username !== 'admin') {
+                    alert('此功能仅限管理员使用');
+                    window.location.href = '/';
+                    return;
+                }
+            })
+            .catch(error => {
+                console.error('权限验证失败:', error);
+                alert('权限验证失败');
+                window.location.href = '/login.html';
+            });
+        }
+
+        // 加载日志
+        function loadLogs() {
+            const token = localStorage.getItem('auth_token');
+            const lines = document.getElementById('logLines').value;
+            const level = currentLevel;
+            
+            const loadingDiv = document.getElementById('loadingLogs');
+            const logContainer = document.getElementById('logContainer');
+            const noLogsDiv = document.getElementById('noLogs');
+            
+            loadingDiv.style.display = 'block';
+            logContainer.style.display = 'none';
+            noLogsDiv.style.display = 'none';
+            
+            let url = `/admin/logs?lines=${lines}`;
+            if (level) {
+                url += `&level=${level}`;
+            }
+            
+            fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => {
+                console.log('API响应状态:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('API响应数据:', data);
+                loadingDiv.style.display = 'none';
+
+                if (data.success === false) {
+                    console.error('API返回错误:', data.message);
+                    noLogsDiv.innerHTML = `
+                        <div class="text-center p-4 text-danger">
+                            <i class="bi bi-exclamation-triangle fs-1"></i>
+                            <p class="mt-2">加载日志失败</p>
+                            <p class="small">${data.message || '未知错误'}</p>
+                        </div>
+                    `;
+                    noLogsDiv.style.display = 'block';
+                    return;
+                }
+
+                if (data.logs && data.logs.length > 0) {
+                    console.log(`显示 ${data.logs.length} 条日志`);
+                    displayLogs(data.logs);
+                    updateLogInfo(data);
+                    logContainer.style.display = 'block';
+                } else {
+                    console.log('没有日志数据');
+                    noLogsDiv.innerHTML = `
+                        <div class="text-center p-4 text-muted">
+                            <i class="bi bi-file-text fs-1"></i>
+                            <p class="mt-2">暂无日志数据</p>
+                        </div>
+                    `;
+                    noLogsDiv.style.display = 'block';
+                }
+
+                // 更新最后更新时间
+                document.getElementById('lastUpdate').textContent =
+                    '最后更新: ' + new Date().toLocaleTimeString('zh-CN');
+            })
+            .catch(error => {
+                console.error('加载日志失败:', error);
+                loadingDiv.style.display = 'none';
+                noLogsDiv.innerHTML = `
+                    <div class="text-center p-4 text-danger">
+                        <i class="bi bi-exclamation-triangle fs-1"></i>
+                        <p class="mt-2">加载日志失败</p>
+                        <p class="small">${error.message}</p>
+                    </div>
+                `;
+                noLogsDiv.style.display = 'block';
+            });
+        }
+
+        // 显示日志
+        function displayLogs(logs) {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = '';
+
+            // 反转日志数组，让最新的日志显示在最上面
+            const reversedLogs = [...logs].reverse();
+
+            reversedLogs.forEach(log => {
+                const logLine = document.createElement('div');
+                logLine.className = 'log-line';
+
+                // 根据日志级别添加颜色类
+                if (/\|\s*INFO\s*\|/.test(log)) {
+                    logLine.classList.add('log-info');
+                } else if (/\|\s*WARNING\s*\|/.test(log)) {
+                    logLine.classList.add('log-warning');
+                } else if (/\|\s*ERROR\s*\|/.test(log)) {
+                    logLine.classList.add('log-error');
+                } else if (/\|\s*DEBUG\s*\|/.test(log)) {
+                    logLine.classList.add('log-debug');
+                }
+
+                logLine.textContent = log;
+                logContainer.appendChild(logLine);
+            });
+
+            // 自动滚动到顶部（显示最新日志）
+            scrollToTop();
+        }
+
+        // 更新日志信息
+        function updateLogInfo(data) {
+            document.getElementById('logFile').textContent = data.log_file || '-';
+            document.getElementById('displayLines').textContent = data.total_lines || '-';
+        }
+
+        // 按级别过滤
+        function filterByLevel(level) {
+            currentLevel = level;
+            
+            // 更新过滤按钮状态
+            document.querySelectorAll('.filter-badge').forEach(badge => {
+                badge.classList.remove('active');
+            });
+            document.querySelector(`[data-level="${level}"]`).classList.add('active');
+            
+            // 更新当前过滤显示
+            const filterText = level ? level.toUpperCase() : '全部';
+            document.getElementById('currentFilter').textContent = filterText;
+            
+            // 重新加载日志
+            loadLogs();
+        }
+
+        // 切换自动刷新
+        function toggleAutoRefresh() {
+            const autoRefresh = document.getElementById('autoRefresh');
+            const label = document.getElementById('autoRefreshLabel');
+            const icon = document.getElementById('autoRefreshIcon');
+            
+            if (autoRefresh.checked) {
+                // 开启自动刷新
+                autoRefreshInterval = setInterval(loadLogs, 5000); // 每5秒刷新
+                label.textContent = '开启 (5s)';
+                icon.style.display = 'inline';
+                icon.classList.add('auto-refresh-indicator');
+            } else {
+                // 关闭自动刷新
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                label.textContent = '关闭';
+                icon.style.display = 'none';
+                icon.classList.remove('auto-refresh-indicator');
+            }
+        }
+
+        // 滚动到顶部
+        function scrollToTop() {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.scrollTop = 0;
+        }
+
+        // 滚动到底部
+        function scrollToBottom() {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 退出登录
+        function logout() {
+            // 清理自动刷新
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login.html';
+        }
+
+        // 页面卸载时清理定时器
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

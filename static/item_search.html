@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品搜索 - 闲鱼管理系统</title>
+    <link href="/static/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .search-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        .item-card {
+            transition: transform 0.2s;
+        }
+        .item-card:hover {
+            transform: translateY(-2px);
+        }
+        .item-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        .price {
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .seller-name {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        .tags {
+            margin-top: 10px;
+        }
+        .tag {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            color: #6c757d;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/index.html">
+                <i class="bi bi-search me-2"></i>
+                商品搜索
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/index.html">
+                    <i class="bi bi-house"></i> 返回主页
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 加载提示 -->
+        <div id="loadingAuth" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">验证登录状态...</span>
+            </div>
+            <p class="mt-3">正在验证登录状态...</p>
+        </div>
+
+        <!-- 主要内容（初始隐藏） -->
+        <div id="mainContent" style="display: none;">
+        <!-- 搜索表单 -->
+        <div class="search-form">
+            <h4 class="mb-4">
+                <i class="bi bi-search me-2"></i>
+                闲鱼商品搜索
+            </h4>
+            <div class="alert alert-info mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>功能说明：</strong>
+                <ul class="mb-0 mt-2">
+                    <li><strong>查询总页数：</strong>输入要获取的页数（1-20页），系统会一次性获取所有页面的数据</li>
+                    <li><strong>每页显示：</strong>前端分页显示的每页商品数量</li>
+                    <li><strong>数据来源：</strong>使用真实的闲鱼数据，通过浏览器自动化技术获取</li>
+                </ul>
+            </div>
+            <form id="searchForm">
+                <div class="row">
+                    <div class="col-md-5">
+                        <label for="keyword" class="form-label">搜索关键词</label>
+                        <input type="text" class="form-control" id="keyword" placeholder="请输入商品关键词" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="totalPages" class="form-label">查询总页数</label>
+                        <input type="number" class="form-control" id="totalPages" value="1" min="1" max="20" placeholder="输入页数">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="pageSize" class="form-label">每页显示</label>
+                        <select class="form-select" id="pageSize">
+                            <option value="10">10条</option>
+                            <option value="20" selected>20条</option>
+                            <option value="30">30条</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-2"></i>
+                                搜索
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- 搜索结果统计 -->
+        <div id="searchStats" class="alert alert-info" style="display: none;">
+            <i class="bi bi-info-circle me-2"></i>
+            <span id="statsText"></span>
+        </div>
+
+        <!-- 加载状态 -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">搜索中...</span>
+            </div>
+            <p class="mt-3">正在搜索商品，请稍候...</p>
+        </div>
+
+        <!-- 搜索结果 -->
+        <div id="searchResults" class="row">
+            <!-- 商品卡片将在这里动态生成 -->
+        </div>
+
+        <!-- 无结果提示 -->
+        <div id="noResults" class="no-results" style="display: none;">
+            <i class="bi bi-search" style="font-size: 3em; color: #dee2e6;"></i>
+            <h5 class="mt-3">没有找到相关商品</h5>
+            <p class="text-muted">请尝试使用其他关键词搜索</p>
+        </div>
+
+        <!-- 分页 -->
+        <div id="paginationContainer" class="pagination-container" style="display: none;">
+            <nav>
+                <ul class="pagination" id="pagination">
+                    <!-- 分页按钮将在这里动态生成 -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- 商品详情模态框 -->
+    <div class="modal fade" id="itemDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-box-seam me-2"></i>
+                        商品详情
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="itemDetailContent">
+                    <!-- 详情内容将在这里动态加载 -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- 结束 mainContent -->
+
+    <script src="/static/lib/bootstrap/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        let currentKeyword = '';
+        let allItems = [];  // 存储所有获取的商品数据
+        let currentPageSize = 20;  // 前端分页每页显示数量
+        let totalResults = 0;
+        let authToken = localStorage.getItem('auth_token');
+        const apiBase = location.origin;
+
+        // HTML转义函数（全局函数）
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 显示商品详情（全局函数）
+        async function showItemDetail(itemId) {
+            try {
+                const modal = new bootstrap.Modal(document.getElementById('itemDetailModal'));
+                const content = document.getElementById('itemDetailContent');
+
+                // 显示加载状态
+                content.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载商品详情...</p>
+                    </div>
+                `;
+
+                modal.show();
+
+                // 调用API获取商品详情
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const response = await fetch(`${apiBase}/items/detail/${itemId}`, {
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        content.innerHTML = `
+                            <div class="item-detail">
+                                <h6>商品详情</h6>
+                                <pre style="white-space: pre-wrap; font-family: inherit;">${escapeHtml(result.data)}</pre>
+                            </div>
+                        `;
+                    } else {
+                        content.innerHTML = `
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                ${escapeHtml(result.message || '获取商品详情失败')}
+                            </div>
+                        `;
+                    }
+                } else {
+                    content.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle me-2"></i>
+                            获取商品详情失败，请稍后重试
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('获取商品详情失败:', error);
+                const content = document.getElementById('itemDetailContent');
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-x-circle me-2"></i>
+                        网络错误，请检查网络连接
+                    </div>
+                `;
+            }
+        }
+
+        // 检查用户登录状态
+        async function checkLoginStatus() {
+            if (!authToken) {
+                // 未登录，直接重定向到登录页面
+                redirectToLogin();
+                return false;
+            }
+
+            // 验证token是否有效
+            try {
+                const response = await fetch(`${apiBase}/verify`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.authenticated) {
+                        return true;
+                    }
+                }
+
+                // token无效，清除并重定向
+                localStorage.removeItem('auth_token');
+                redirectToLogin();
+                return false;
+
+            } catch (error) {
+                console.error('Token验证失败:', error);
+                // 网络错误时也清除token并重定向
+                localStorage.removeItem('auth_token');
+                redirectToLogin();
+                return false;
+            }
+        }
+
+        // 重定向到登录页面
+        function redirectToLogin() {
+            // 保存当前页面URL，登录后可以返回
+            const currentUrl = window.location.href;
+            localStorage.setItem('redirectAfterLogin', currentUrl);
+
+            // 立即重定向到登录页面
+            window.location.href = 'login.html';
+        }
+
+        // 页面加载时立即检查登录状态
+        (function() {
+            // 在页面内容加载前就检查登录状态
+            if (!authToken) {
+                redirectToLogin();
+                return;
+            }
+        })();
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 异步检查登录状态（验证token有效性）
+            const isLoggedIn = await checkLoginStatus();
+            if (!isLoggedIn) {
+                return;
+            }
+
+            // 隐藏加载提示，显示主要内容
+            document.getElementById('loadingAuth').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+
+            // 如果已登录，继续原有的初始化逻辑
+            initializePage();
+        });
+
+        // 初始化页面
+        function initializePage() {
+
+        // 搜索表单提交
+        const searchForm = document.getElementById('searchForm');
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const keyword = document.getElementById('keyword').value.trim();
+            const totalPages = parseInt(document.getElementById('totalPages').value);
+            const pageSize = parseInt(document.getElementById('pageSize').value);
+
+            if (!keyword) {
+                alert('请输入搜索关键词');
+                return;
+            }
+
+            if (isNaN(totalPages) || totalPages < 1 || totalPages > 20) {
+                alert('请输入有效的页数（1-20页）');
+                return;
+            }
+
+            currentKeyword = keyword;
+            currentPageSize = pageSize;
+            currentPage = 1;  // 重置到第一页
+
+            searchAllPages(keyword, totalPages);
+        });
+        } else {
+            console.error('找不到搜索表单元素！');
+        }
+
+        // 监听每页显示数量的变化
+        const pageSizeSelect = document.getElementById('pageSize');
+        if (pageSizeSelect) {
+            pageSizeSelect.addEventListener('change', function() {
+                const newPageSize = parseInt(this.value);
+
+                // 如果已经有搜索结果，立即更新分页显示
+                if (allItems.length > 0) {
+                    currentPageSize = newPageSize;
+                    currentPage = 1; // 重置到第一页
+                    displayCurrentPage();
+                    updateFrontendPagination();
+
+                    // 更新统计信息
+                    updateStatsDisplay();
+                }
+            });
+        }
+
+        // 检查是否有有效的cookies账户
+        async function checkValidCookies() {
+            try {
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const response = await fetch(`${apiBase}/cookies/check`, {
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.hasValidCookies;
+                } else {
+                    return false;
+                }
+            } catch (error) {
+                console.error('检查cookies失败:', error);
+                return false;
+            }
+        }
+
+        // 搜索多页商品数据
+        async function searchAllPages(keyword, totalPages) {
+            try {
+                // 检查是否有有效的cookies账户
+                const hasValidCookies = await checkValidCookies();
+                if (!hasValidCookies) {
+                    showErrorMessage('搜索失败：系统中不存在有效的账户信息。请先在Cookie管理中添加有效的闲鱼账户。');
+                    return;
+                }
+
+                // 显示加载状态
+                showLoading(true);
+                hideResults();
+
+                // 构建请求头
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                // 如果有token则添加认证头
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const requestData = {
+                    keyword: keyword,
+                    total_pages: totalPages  // 传递总页数参数
+                };
+
+                console.log('发送多页搜索API请求:', {
+                    url: `${apiBase}/items/search_multiple`,
+                    method: 'POST',
+                    headers: headers,
+                    body: requestData
+                });
+
+                const response = await fetch(`${apiBase}/items/search_multiple`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log('API响应状态:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('API返回的完整数据:', data);
+
+                    if (data.success) {
+                        allItems = data.data || [];
+                        totalResults = allItems.length;
+
+                        console.log('设置allItems:', allItems);
+                        console.log('allItems长度:', allItems.length);
+                        console.log('totalResults:', totalResults);
+
+                        // 检查是否有错误信息
+                        if (data.error) {
+                            showErrorMessage(`搜索完成，但遇到问题: ${data.error}`);
+                        }
+
+                        console.log('调用displayPaginatedResults...');
+                        displayPaginatedResults(data);
+                        console.log('调用updateFrontendPagination...');
+                        updateFrontendPagination();
+                    } else {
+                        console.error('API返回success=false:', data);
+                        throw new Error(data.message || data.error || '搜索失败');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`服务器错误 (${response.status}): ${errorText}`);
+                }
+            } catch (error) {
+                console.error('搜索失败:', error);
+                showErrorMessage('搜索失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 搜索单页商品（保留原有功能）
+        async function searchItems(page = 1) {
+            console.log('searchItems函数被调用，参数:', { page, currentKeyword, currentPageSize });
+            try {
+                // 显示加载状态
+                showLoading(true);
+                hideResults();
+                
+                // 构建请求头
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                // 如果有token则添加认证头
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+
+                const requestData = {
+                    keyword: currentKeyword,
+                    page: page,
+                    page_size: 20  // 固定每页20条数据
+                };
+
+                console.log('发送API请求:', {
+                    url: `${apiBase}/items/search`,
+                    method: 'POST',
+                    headers: headers,
+                    body: requestData
+                });
+
+                const response = await fetch(`${apiBase}/items/search`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log('API响应状态:', response.status);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        displayResults(data);
+                        currentPage = page;
+                        totalResults = data.total;
+                        updatePagination();
+                    } else {
+                        throw new Error(data.message || '搜索失败');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.error('搜索失败:', error);
+                showErrorMessage('搜索失败: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // 显示错误消息
+        function showErrorMessage(message) {
+            // 创建或更新错误提示
+            let errorAlert = document.getElementById('errorAlert');
+            if (!errorAlert) {
+                errorAlert = document.createElement('div');
+                errorAlert.id = 'errorAlert';
+                errorAlert.className = 'alert alert-danger alert-dismissible fade show';
+                errorAlert.innerHTML = `
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <span id="errorMessage"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+
+                // 插入到搜索表单后面
+                const searchForm = document.querySelector('.search-form');
+                searchForm.parentNode.insertBefore(errorAlert, searchForm.nextSibling);
+            }
+
+            document.getElementById('errorMessage').textContent = message;
+            errorAlert.style.display = 'block';
+
+            // 5秒后自动隐藏
+            setTimeout(() => {
+                if (errorAlert) {
+                    errorAlert.style.display = 'none';
+                }
+            }, 5000);
+        }
+
+        // 隐藏结果
+        function hideResults() {
+            document.getElementById('searchResults').innerHTML = '';
+            document.getElementById('searchStats').style.display = 'none';
+            document.getElementById('noResults').style.display = 'none';
+            document.getElementById('paginationContainer').style.display = 'none';
+        }
+
+        // 显示分页搜索结果
+        function displayPaginatedResults(data) {
+            console.log('displayPaginatedResults被调用，data:', data);
+
+            // 显示统计信息
+            const statsElement = document.getElementById('searchStats');
+            const statsText = document.getElementById('statsText');
+
+            console.log('statsElement:', statsElement);
+            console.log('statsText:', statsText);
+
+            // 检查数据来源
+            let dataSource = '';
+            if (data.is_real_data) {
+                dataSource = ' [真实数据]';
+                statsElement.className = 'alert alert-success';
+            } else {
+                dataSource = ' [数据获取异常]';
+                statsElement.className = 'alert alert-danger';
+            }
+
+            statsElement.style.display = 'block';
+            console.log('统计信息已显示');
+
+            // 使用统一的统计信息更新函数
+            console.log('调用updateStatsDisplay...');
+            updateStatsDisplay();
+
+            // 显示当前页的数据
+            console.log('调用displayCurrentPage...');
+            displayCurrentPage();
+        }
+
+        } // 结束 initializePage 函数
+
+        // ========================= 全局函数 =========================
+
+        // 显示当前页数据（全局函数）
+        function displayCurrentPage() {
+            console.log('displayCurrentPage被调用');
+            console.log('allItems:', allItems);
+            console.log('allItems.length:', allItems.length);
+            console.log('currentPage:', currentPage);
+            console.log('currentPageSize:', currentPageSize);
+
+            const resultsContainer = document.getElementById('searchResults');
+            console.log('resultsContainer:', resultsContainer);
+
+            // 计算当前页的数据范围
+            const startIndex = (currentPage - 1) * currentPageSize;
+            const endIndex = startIndex + currentPageSize;
+            const currentItems = allItems.slice(startIndex, endIndex);
+
+            console.log('startIndex:', startIndex);
+            console.log('endIndex:', endIndex);
+            console.log('currentItems:', currentItems);
+            console.log('currentItems.length:', currentItems.length);
+
+            if (currentItems.length === 0) {
+                console.log('没有数据，显示无结果提示');
+                document.getElementById('noResults').style.display = 'block';
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            document.getElementById('noResults').style.display = 'none';
+
+            // 生成商品卡片
+            console.log('生成商品卡片...');
+            const cardsHtml = currentItems.map(item => createItemCard(item)).join('');
+            console.log('生成的HTML长度:', cardsHtml.length);
+            resultsContainer.innerHTML = cardsHtml;
+            console.log('商品卡片已设置到容器中');
+        }
+
+        // 显示搜索结果（保留原有功能）
+        function displayResults(data) {
+            const resultsContainer = document.getElementById('searchResults');
+            const items = data.data || [];
+
+            // 显示统计信息
+            const statsElement = document.getElementById('searchStats');
+            const statsText = document.getElementById('statsText');
+
+            // 检查数据来源
+            let dataSource = '';
+            if (data.is_real_data) {
+                dataSource = ' [真实数据]';
+                statsElement.className = 'alert alert-success';
+            } else {
+                dataSource = ' [数据获取异常]';
+                statsElement.className = 'alert alert-danger';
+            }
+
+            statsText.textContent = `搜索"${data.keyword}"，第 ${data.page} 页结果，共显示 ${data.data.length} 个商品${dataSource}`;
+            statsElement.style.display = 'block';
+
+            if (items.length === 0) {
+                document.getElementById('noResults').style.display = 'block';
+                return;
+            }
+
+            // 生成商品卡片
+            resultsContainer.innerHTML = items.map(item => createItemCard(item)).join('');
+        }
+
+
+
+
+
+
+
+
+
+        // 更新分页提示（保留原有功能）
+        function updatePagination() {
+            const paginationContainer = document.getElementById('paginationContainer');
+            const pagination = document.getElementById('pagination');
+
+            // 显示页码选择提示
+            paginationContainer.style.display = 'block';
+
+            let paginationHtml = `
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        <i class="bi bi-info-circle me-2"></i>
+                        要查看其他页面，请在上方选择页码后重新搜索
+                    </span>
+                </li>
+            `;
+
+            pagination.innerHTML = paginationHtml;
+        } // 结束 initializePage 函数
+
+        // ========================= 全局函数 =========================
+
+        // 跳转到指定页（全局函数，供分页按钮调用）
+        function goToPage(page) {
+            currentPage = page;
+            displayCurrentPage();
+            updateFrontendPagination();
+
+            // 更新统计信息
+            updateStatsDisplay();
+
+            // 滚动到页面顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 更新统计信息显示（全局函数）
+        function updateStatsDisplay() {
+            const statsText = document.getElementById('statsText');
+            let dataSource = '';
+
+            if (allItems.length > 0) {
+                dataSource = ' [真实数据]';
+            }
+
+            const totalPages = Math.ceil(allItems.length / currentPageSize);
+            statsText.textContent = `搜索"${currentKeyword}"，共获取 ${allItems.length} 个商品${dataSource}，当前显示第 ${currentPage}/${totalPages} 页（每页${currentPageSize}条）`;
+        }
+
+        // 更新前端分页（全局函数）
+        function updateFrontendPagination() {
+            const totalPages = Math.ceil(allItems.length / currentPageSize);
+            const paginationContainer = document.getElementById('paginationContainer');
+            const pagination = document.getElementById('pagination');
+
+            if (totalPages <= 1) {
+                paginationContainer.style.display = 'none';
+                return;
+            }
+
+            paginationContainer.style.display = 'block';
+
+            let paginationHtml = '';
+
+            // 上一页
+            if (currentPage > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;">上一页</a></li>`;
+            }
+
+            // 页码显示逻辑
+            if (totalPages <= 7) {
+                // 如果总页数不超过7页，显示所有页码
+                for (let i = 1; i <= totalPages; i++) {
+                    const active = i === currentPage ? 'active' : '';
+                    paginationHtml += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a></li>`;
+                }
+            } else {
+                // 如果总页数超过7页，使用省略号显示
+                if (currentPage <= 4) {
+                    // 当前页在前面，显示 1 2 3 4 5 ... 最后页
+                    for (let i = 1; i <= 5; i++) {
+                        const active = i === currentPage ? 'active' : '';
+                        paginationHtml += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a></li>`;
+                    }
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages}); return false;">${totalPages}</a></li>`;
+                } else if (currentPage >= totalPages - 3) {
+                    // 当前页在后面，显示 1 ... 倒数5页
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1); return false;">1</a></li>`;
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    for (let i = totalPages - 4; i <= totalPages; i++) {
+                        const active = i === currentPage ? 'active' : '';
+                        paginationHtml += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a></li>`;
+                    }
+                } else {
+                    // 当前页在中间，显示 1 ... 当前页前后2页 ... 最后页
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1); return false;">1</a></li>`;
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    for (let i = currentPage - 2; i <= currentPage + 2; i++) {
+                        const active = i === currentPage ? 'active' : '';
+                        paginationHtml += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a></li>`;
+                    }
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages}); return false;">${totalPages}</a></li>`;
+                }
+            }
+
+            // 下一页
+            if (currentPage < totalPages) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;">下一页</a></li>`;
+            }
+
+            pagination.innerHTML = paginationHtml;
+        }
+
+        // 创建商品卡片HTML（全局函数）
+        function createItemCard(item) {
+            console.log('createItemCard被调用，item数据:', item);
+            console.log('item的所有字段:', Object.keys(item));
+
+            const tags = item.tags ? item.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('') : '';
+            const imageUrl = item.main_image || 'https://via.placeholder.com/200x200?text=暂无图片';
+            const wantCount = item.want_count || 0;
+
+            console.log('处理后的数据:', {
+                title: item.title,
+                price: item.price,
+                seller_name: item.seller_name,
+                imageUrl: imageUrl,
+                wantCount: wantCount
+            });
+
+            return `
+                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
+                    <div class="card item-card h-100">
+                        <img src="${escapeHtml(imageUrl)}" class="item-image" alt="${escapeHtml(item.title)}" onerror="this.src='https://via.placeholder.com/200x200?text=图片加载失败'">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title.length > 50 ? item.title.substring(0, 50) + '...' : item.title)}</h6>
+                            <div class="price mb-2">${escapeHtml(item.price)}</div>
+                            <div class="seller-name mb-2">
+                                <i class="bi bi-person me-1"></i>
+                                ${escapeHtml(item.seller_name)}
+                            </div>
+                            ${wantCount > 0 ? `<div class="want-count mb-2">
+                                <i class="bi bi-heart-fill me-1" style="color: #ff6b6b;"></i>
+                                <span class="badge bg-danger">${wantCount}人想要</span>
+                            </div>` : ''}
+                            ${item.publish_time ? `<div class="text-muted small mb-2">
+                                <i class="bi bi-clock me-1"></i>
+                                ${escapeHtml(item.publish_time)}
+                            </div>` : ''}
+                            <div class="tags mb-3">${tags}</div>
+                            <div class="mt-auto">
+                                <div class="btn-group w-100" role="group">
+                                    <a href="${escapeHtml(item.item_url)}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-link-45deg me-1"></i>
+                                        查看商品
+                                    </a>
+                                    <button class="btn btn-outline-info btn-sm" onclick="showItemDetail('${escapeHtml(item.item_id)}')">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        详情
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 显示商品详情（全局函数）
+        function showItemDetail(itemId) {
+            // 查找对应的商品数据
+            const item = allItems.find(i => i.item_id === itemId);
+            if (!item) {
+                alert('商品信息不存在');
+                return;
+            }
+
+            // 填充模态框内容
+            const modalBody = document.querySelector('#itemDetailModal .modal-body');
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <img src="${escapeHtml(item.main_image || 'https://via.placeholder.com/400x400?text=暂无图片')}"
+                             class="img-fluid rounded" alt="${escapeHtml(item.title)}"
+                             onerror="this.src='https://via.placeholder.com/400x400?text=图片加载失败'">
+                    </div>
+                    <div class="col-md-6">
+                        <h5>${escapeHtml(item.title)}</h5>
+                        <p class="text-primary fs-4 fw-bold">${escapeHtml(item.price)}</p>
+                        <p><strong>卖家：</strong>${escapeHtml(item.seller_name)}</p>
+                        ${item.want_count ? `<p><strong>想要人数：</strong>${item.want_count}人</p>` : ''}
+                        ${item.publish_time ? `<p><strong>发布时间：</strong>${escapeHtml(item.publish_time)}</p>` : ''}
+                        ${item.tags && item.tags.length > 0 ? `
+                            <p><strong>标签：</strong></p>
+                            <div class="mb-3">
+                                ${item.tags.map(tag => `<span class="badge bg-secondary me-1">${escapeHtml(tag)}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        <p><strong>商品链接：</strong></p>
+                        <a href="${escapeHtml(item.item_url)}" target="_blank" class="btn btn-primary">
+                            <i class="bi bi-link-45deg me-1"></i>
+                            在闲鱼中查看
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            // 显示模态框
+            const modal = new bootstrap.Modal(document.getElementById('itemDetailModal'));
+            modal.show();
+        }
+    </script>
+</body>
+</html>

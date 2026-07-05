@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 闲鱼自动回复系统</title>
+    <link href="/static/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/lib/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+        .user-card {
+            transition: transform 0.2s;
+            border: 1px solid #e0e0e0;
+        }
+        .user-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+        }
+        .btn-danger-custom {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            border: none;
+        }
+        .btn-danger-custom:hover {
+            background: linear-gradient(135deg, #ee5a52 0%, #ff6b6b 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-robot"></i> 闲鱼自动回复系统
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">
+                    <i class="bi bi-house"></i> 首页
+                </a>
+                <a class="nav-link active" href="/user_management.html">
+                    <i class="bi bi-people"></i> 用户管理
+                </a>
+                <a class="nav-link" href="/data_management.html">
+                    <i class="bi bi-database"></i> 数据管理
+                </a>
+                <a class="nav-link" href="/log_management.html">
+                    <i class="bi bi-file-text"></i> 日志管理
+                </a>
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="bi bi-box-arrow-right"></i> 退出
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 管理员标题 -->
+    <div class="admin-header">
+        <div class="container">
+            <h1 class="mb-0">
+                <i class="bi bi-people"></i> 用户管理
+            </h1>
+            <p class="mb-0 mt-2">管理系统中的所有用户账号</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计信息 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h3 id="totalUsers">-</h3>
+                        <p class="mb-0">总用户数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h3 id="totalCookies">-</h3>
+                        <p class="mb-0">总Cookie数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h3 id="totalCards">-</h3>
+                        <p class="mb-0">总卡券数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h3 id="systemUptime">运行中</h3>
+                        <p class="mb-0">系统状态</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户列表 -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-people-fill"></i> 用户列表
+                </h5>
+                <button class="btn btn-primary" onclick="refreshUsers()">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="loadingUsers" class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载用户信息...</p>
+                </div>
+                <div id="usersList" class="row" style="display: none;"></div>
+                <div id="noUsers" class="text-center py-4" style="display: none;">
+                    <i class="bi bi-people" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="mt-2 text-muted">暂无用户</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-exclamation-triangle text-warning"></i> 确认删除
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>您确定要删除用户 <strong id="deleteUserName"></strong> 吗？</p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>警告：</strong>此操作将删除该用户的所有数据，包括：
+                        <ul class="mt-2 mb-0">
+                            <li>所有Cookie账号</li>
+                            <li>所有卡券</li>
+                            <li>所有关键字和回复设置</li>
+                            <li>所有个人设置</li>
+                        </ul>
+                        <p class="mt-2 mb-0"><strong>此操作不可恢复！</strong></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger-custom" onclick="confirmDeleteUser()">
+                        <i class="bi bi-trash"></i> 确认删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/lib/bootstrap/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentDeleteUserId = null;
+        let deleteUserModal = null;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查管理员权限
+            checkAdminPermission();
+            
+            // 初始化模态框
+            deleteUserModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            
+            // 加载数据
+            loadSystemStats();
+            loadUsers();
+        });
+
+        // 检查管理员权限
+        function checkAdminPermission() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                alert('请先登录');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            // 验证token并检查是否为管理员
+            fetch('/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    alert('登录已过期，请重新登录');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                // 检查是否为管理员
+                if (data.username !== 'admin') {
+                    alert('此功能仅限管理员使用');
+                    window.location.href = '/';
+                    return;
+                }
+            })
+            .catch(error => {
+                console.error('权限验证失败:', error);
+                alert('权限验证失败');
+                window.location.href = '/login.html';
+            });
+        }
+
+        // 加载系统统计信息
+        function loadSystemStats() {
+            const token = localStorage.getItem('auth_token');
+            
+            fetch('/admin/stats', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalUsers').textContent = data.users.total;
+                document.getElementById('totalCookies').textContent = data.cookies.total;
+                document.getElementById('totalCards').textContent = data.cards.total;
+            })
+            .catch(error => {
+                console.error('加载统计信息失败:', error);
+            });
+        }
+
+        // 加载用户列表
+        function loadUsers() {
+            const token = localStorage.getItem('auth_token');
+            const loadingDiv = document.getElementById('loadingUsers');
+            const usersListDiv = document.getElementById('usersList');
+            const noUsersDiv = document.getElementById('noUsers');
+            
+            loadingDiv.style.display = 'block';
+            usersListDiv.style.display = 'none';
+            noUsersDiv.style.display = 'none';
+            
+            fetch('/admin/users', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                
+                if (data.users && data.users.length > 0) {
+                    displayUsers(data.users);
+                    usersListDiv.style.display = 'block';
+                } else {
+                    noUsersDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('加载用户列表失败:', error);
+                loadingDiv.style.display = 'none';
+                noUsersDiv.style.display = 'block';
+                alert('加载用户列表失败');
+            });
+        }
+
+        // 显示用户列表
+        function displayUsers(users) {
+            const usersListDiv = document.getElementById('usersList');
+            usersListDiv.innerHTML = '';
+            
+            users.forEach(user => {
+                const userCard = createUserCard(user);
+                usersListDiv.appendChild(userCard);
+            });
+        }
+
+        // 创建用户卡片
+        function createUserCard(user) {
+            const col = document.createElement('div');
+            col.className = 'col-md-6 col-lg-4 mb-3';
+            
+            const isAdmin = user.username === 'admin';
+            const badgeClass = isAdmin ? 'bg-danger' : 'bg-primary';
+            const badgeText = isAdmin ? '管理员' : '普通用户';
+            
+            col.innerHTML = `
+                <div class="card user-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title mb-0">
+                                <i class="bi bi-person-circle"></i> ${user.username}
+                            </h6>
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                        </div>
+                        <p class="card-text text-muted small mb-2">
+                            <i class="bi bi-envelope"></i> ${user.email}
+                        </p>
+                        <div class="row text-center mb-3">
+                            <div class="col">
+                                <small class="text-muted">Cookie数</small>
+                                <div class="fw-bold">${user.cookie_count || 0}</div>
+                            </div>
+                            <div class="col">
+                                <small class="text-muted">卡券数</small>
+                                <div class="fw-bold">${user.card_count || 0}</div>
+                            </div>
+                        </div>
+                        <div class="text-muted small mb-2">
+                            <i class="bi bi-calendar"></i> 注册时间：${formatDate(user.created_at)}
+                        </div>
+                        ${!isAdmin ? `
+                        <div class="d-grid">
+                            <button class="btn btn-danger-custom btn-sm" onclick="deleteUser(${user.id}, '${user.username}')">
+                                <i class="bi bi-trash"></i> 删除用户
+                            </button>
+                        </div>
+                        ` : `
+                        <div class="text-center">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check"></i> 管理员账号不可删除
+                            </small>
+                        </div>
+                        `}
+                    </div>
+                </div>
+            `;
+            
+            return col;
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN');
+        }
+
+        // 删除用户
+        function deleteUser(userId, username) {
+            currentDeleteUserId = userId;
+            document.getElementById('deleteUserName').textContent = username;
+            deleteUserModal.show();
+        }
+
+        // 确认删除用户
+        function confirmDeleteUser() {
+            if (!currentDeleteUserId) return;
+
+            const token = localStorage.getItem('auth_token');
+            
+            fetch(`/admin/users/${currentDeleteUserId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                deleteUserModal.hide();
+                alert(data.message || '用户删除成功');
+                
+                // 刷新页面数据
+                loadSystemStats();
+                loadUsers();
+            })
+            .catch(error => {
+                console.error('删除用户失败:', error);
+                alert('删除用户失败');
+            });
+        }
+
+        // 刷新用户列表
+        function refreshUsers() {
+            loadSystemStats();
+            loadUsers();
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>
