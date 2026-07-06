@@ -4,6 +4,10 @@
 
 ---
 
+## 📸 演示地址
+
+https://xianyu.88531.cn/admin 
+
 ## 📸 界面预览
 
 <img width="3364" height="348" alt="image" src="https://github.com/user-attachments/assets/72f640b0-6cd7-4531-ac26-d7c777031719" />
