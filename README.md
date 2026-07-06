@@ -10,9 +10,11 @@
 |:---:|:---:|
 | ![登录页面](screenshots/login.png) | ![数据看板](screenshots/dashboard.png) |
 
-| 账号管理 | 关键词管理 |
+| 账号管理 | AI设置 |
 |:---:|:---:|
-| ![账号管理](screenshots/accounts.png) | ![关键词管理](screenshots/keywords.png) |
+| <img width="3384" height="913" alt="image" src="https://github.com/user-attachments/assets/8ce6afd9-2890-4153-88b2-9a0f8988d54c" />
+ |  <img width="601" height="1399" alt="PixPin_2026-07-06_09-35-22" src="https://github.com/user-attachments/assets/cf30dd77-00a0-45d6-970a-876225742ec4" />
+ |
 
 | 商品管理 | 订单管理 |
 |:---:|:---:|
