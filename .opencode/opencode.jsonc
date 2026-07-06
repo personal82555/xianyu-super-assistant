@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // 项目级指令文件，agent 启动时自动注入上下文
+  "instructions": [
+    ".opencode/rules/coding-standards.md",
+    ".opencode/rules/architecture.md",
+    ".opencode/rules/deployment.md"
+  ],
+
+  // 项目级参考资料，agent 按需加载
+  "references": {
+    "api-endpoints": {
+      "path": ".opencode/rules/api-endpoints.md",
+      "description": "闲鱼 API 端点列表和签名方式"
+    },
+    "db-schema": {
+      "path": "db_manager.py",
+      "description": "数据库表结构和操作接口"
+    }
+  }
+}
