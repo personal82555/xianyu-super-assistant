@@ -6,22 +6,17 @@
 
 ## 📸 界面预览
 
-| 登录页面 | 数据看板 |
-|:---:|:---:|
-| ![登录页面](screenshots/login.png) | ![数据看板](screenshots/dashboard.png) |
+<img width="3364" height="348" alt="image" src="https://github.com/user-attachments/assets/72f640b0-6cd7-4531-ac26-d7c777031719" />
+<img width="601" height="1399" alt="PixPin_2026-07-06_09-35-22" src="https://github.com/user-attachments/assets/64dbf44a-5d80-4223-a794-0f271e7ee5cc" />
+<img width="3418" height="1289" alt="image" src="https://github.com/user-attachments/assets/fd723e4a-cfed-4e1d-a04a-a32ad31577f9" />
+<img width="3394" height="1777" alt="image" src="https://github.com/user-attachments/assets/539c0fbc-39eb-4909-949f-23ee34b61293" />
+<img width="3388" height="712" alt="image" src="https://github.com/user-attachments/assets/8bb87fa8-1535-4ae1-a7ce-f3c1c37c68a7" />
+<img width="3220" height="1574" alt="image" src="https://github.com/user-attachments/assets/72932083-dc35-471d-90e8-085e8a874ede" />
 
-| 账号管理 | AI设置 |
-|:---:|:---:|
 
- | ![账号管理]([screenshots/items.png](https://github.com/user-attachments/assets/8ce6afd9-2890-4153-88b2-9a0f8988d54c)) | ![AI设置]([screenshots/orders.png](https://github.com/user-attachments/assets/cf30dd77-00a0-45d6-970a-876225742ec4)) |
 
-| 商品管理 | 订单管理 |
-|:---:|:---:|
-| ![商品管理](screenshots/items.png) | ![订单管理](screenshots/orders.png) |
 
-| 通知设置 | 实时日志 |
-|:---:|:---:|
-| ![通知设置](screenshots/notifications.png) | ![实时日志](screenshots/logs.png) |
+
 
 ---
 
