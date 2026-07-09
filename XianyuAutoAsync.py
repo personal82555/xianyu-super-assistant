@@ -24,11 +24,15 @@ from collections import defaultdict
 class AutoReplyPauseManager:
     """自动回复暂停管理器"""
     def __init__(self):
-        # 存储每个chat_id的暂停信息 {chat_id: pause_until_timestamp}
+        # 存储每个(chat_id, cookie_id)的暂停信息 {(chat_id, cookie_id): pause_until_timestamp}
         self.paused_chats = {}
 
+    def _make_key(self, chat_id: str, cookie_id: str) -> tuple:
+        """生成暂停记录的复合键"""
+        return (chat_id, cookie_id)
+
     def pause_chat(self, chat_id: str, cookie_id: str):
-        """暂停指定chat_id的自动回复，使用账号特定的暂停时间"""
+        """暂停指定chat_id和账号的自动回复，使用账号特定的暂停时间"""
         # 获取账号特定的暂停时间
         try:
             from db_manager import db_manager
@@ -39,34 +43,37 @@ class AutoReplyPauseManager:
 
         pause_duration_seconds = pause_minutes * 60
         pause_until = time.time() + pause_duration_seconds
-        self.paused_chats[chat_id] = pause_until
+        key = self._make_key(chat_id, cookie_id)
+        self.paused_chats[key] = pause_until
 
         # 计算暂停结束时间
         end_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(pause_until))
         logger.info(f"【{cookie_id}】检测到手动发出消息，chat_id {chat_id} 自动回复暂停{pause_minutes}分钟，恢复时间: {end_time}")
 
-    def is_chat_paused(self, chat_id: str) -> bool:
-        """检查指定chat_id是否处于暂停状态"""
-        if chat_id not in self.paused_chats:
+    def is_chat_paused(self, chat_id: str, cookie_id: str) -> bool:
+        """检查指定chat_id和账号是否处于暂停状态"""
+        key = self._make_key(chat_id, cookie_id)
+        if key not in self.paused_chats:
             return False
 
         current_time = time.time()
-        pause_until = self.paused_chats[chat_id]
+        pause_until = self.paused_chats[key]
 
         if current_time >= pause_until:
             # 暂停时间已过，移除记录
-            del self.paused_chats[chat_id]
+            del self.paused_chats[key]
             return False
 
         return True
 
-    def get_remaining_pause_time(self, chat_id: str) -> int:
-        """获取指定chat_id剩余暂停时间（秒）"""
-        if chat_id not in self.paused_chats:
+    def get_remaining_pause_time(self, chat_id: str, cookie_id: str) -> int:
+        """获取指定chat_id和账号的剩余暂停时间（秒）"""
+        key = self._make_key(chat_id, cookie_id)
+        if key not in self.paused_chats:
             return 0
 
         current_time = time.time()
-        pause_until = self.paused_chats[chat_id]
+        pause_until = self.paused_chats[key]
         remaining = max(0, int(pause_until - current_time))
 
         return remaining
@@ -74,11 +81,11 @@ class AutoReplyPauseManager:
     def cleanup_expired_pauses(self):
         """清理已过期的暂停记录"""
         current_time = time.time()
-        expired_chats = [chat_id for chat_id, pause_until in self.paused_chats.items()
+        expired_keys = [key for key, pause_until in self.paused_chats.items()
                         if current_time >= pause_until]
 
-        for chat_id in expired_chats:
-            del self.paused_chats[chat_id]
+        for key in expired_keys:
+            del self.paused_chats[key]
 
 
 # 全局暂停管理器实例
@@ -465,9 +472,27 @@ class XianyuLive:
                     from db_manager import db_manager
                     item_info = db_manager.get_item_info(self.cookie_id, item_id)
                     if not item_info:
-                        logger.warning(f'[{msg_time}] 【{self.cookie_id}】❌ 商品 {item_id} 不属于当前账号，跳过自动发货')
-                        return
-                    logger.debug(f'[{msg_time}] 【{self.cookie_id}】✅ 商品 {item_id} 归属验证通过')
+                        # 商品不在数据库中，尝试通过API获取并保存
+                        logger.info(f'[{msg_time}] 【{self.cookie_id}】商品 {item_id} 不在数据库中，尝试通过API获取...')
+                        try:
+                            api_item_info = await self.get_item_info(item_id)
+                            if api_item_info and 'data' in api_item_info:
+                                data = api_item_info['data']
+                                item_data = data.get('itemDO', {})
+                                share_data = item_data.get('shareData', {})
+                                share_info_str = share_data.get('shareInfoJsonString', '')
+                                item_title_from_api = item_data.get('title', '')
+                                if share_info_str or item_title_from_api:
+                                    await self.save_item_info_to_db(item_id, share_info_str or item_title_from_api, item_title_from_api or item_id)
+                                    logger.info(f'[{msg_time}] 【{self.cookie_id}】✅ 通过API获取并保存商品信息: {item_id}')
+                                else:
+                                    logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API返回的商品信息为空，允许继续自动发货')
+                            else:
+                                logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API获取商品信息失败，允许继续自动发货')
+                        except Exception as api_e:
+                            logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API获取商品信息异常: {self._safe_str(api_e)}，允许继续自动发货')
+                    else:
+                        logger.debug(f'[{msg_time}] 【{self.cookie_id}】✅ 商品 {item_id} 归属验证通过')
                 except Exception as e:
                     logger.error(f'[{msg_time}] 【{self.cookie_id}】检查商品归属失败: {self._safe_str(e)}，跳过自动发货')
                     return
@@ -562,7 +587,7 @@ class XianyuLive:
                     for i in range(quantity_to_send):
                         try:
                             # 每次调用都可能获取不同的内容（API卡券、批量数据等）
-                            delivery_content = await self._auto_delivery(item_id, item_title, order_id, send_user_id)
+                            delivery_content = await self._auto_delivery(item_id, item_title, order_id, send_user_id, send_user_name)
                             if delivery_content:
                                 delivery_contents.append(delivery_content)
                                 success_count += 1
@@ -641,6 +666,10 @@ class XianyuLive:
                             await self.send_delivery_failure_notification(send_user_name, send_user_id, item_id, "发货成功")
                     else:
                         logger.warning(f'[{msg_time}] 【自动发货】未找到匹配的发货规则或获取发货内容失败')
+                        # 更新订单发货状态为失败
+                        if order_id:
+                            from db_manager import db_manager
+                            db_manager.update_order_delivery_status(order_id, 'failed')
                         # 发送自动发货失败通知
                         await self.send_delivery_failure_notification(send_user_name, send_user_id, item_id, "未找到匹配的发货规则或获取发货内容失败")
 
@@ -1110,10 +1139,12 @@ class XianyuLive:
         params['sign'] = sign
 
         try:
+            timeout = aiohttp.ClientTimeout(total=15)
             async with self.session.post(
                 'https://h5api.m.goofish.com/h5/mtop.taobao.idle.pc.detail/1.0/',
                 params=params,
-                data=data
+                data=data,
+                timeout=timeout
             ) as response:
                 res_json = await response.json()
 
@@ -1558,8 +1589,9 @@ class XianyuLive:
                     'desc': item_info_raw.get('item_description', '暂无商品描述')
                 }
 
-            # 生成AI回复
-            reply = ai_reply_engine.generate_reply(
+            # 生成AI回复（同步阻塞操作放到线程池，避免阻塞事件循环）
+            reply = await asyncio.to_thread(
+                ai_reply_engine.generate_reply,
                 message=send_message,
                 item_info=item_info,
                 chat_id=chat_id,
@@ -2276,6 +2308,14 @@ class XianyuLive:
                         if not cookie_info:
                             logger.warning(f"Cookie ID {self.cookie_id} 不存在于cookies表中，丢弃订单 {order_id}")
                         else:
+                            # 保存商品标题到 item_info（用于发货规则匹配）
+                            item_title_from_result = result.get('title', '')
+                            if item_id and item_title_from_result:
+                                try:
+                                    await self.save_item_info_to_db(item_id, item_title_from_result, item_title_from_result)
+                                except Exception as save_e:
+                                    logger.debug(f"保存商品信息失败: {self._safe_str(save_e)}")
+
                             success = db_manager.insert_or_update_order(
                                 order_id=order_id,
                                 item_id=item_id,
@@ -2306,7 +2346,7 @@ class XianyuLive:
                 logger.error(f"【{self.cookie_id}】获取订单详情异常: {self._safe_str(e)}")
                 return None
 
-    async def _auto_delivery(self, item_id: str, item_title: str = None, order_id: str = None, send_user_id: str = None):
+    async def _auto_delivery(self, item_id: str, item_title: str = None, order_id: str = None, send_user_id: str = None, send_user_name: str = None):
         """自动发货功能 - 获取卡券规则，执行延时，确认发货，发送内容"""
         try:
             from db_manager import db_manager
@@ -2545,7 +2585,8 @@ class XianyuLive:
                                 item_id=item_id,
                                 buyer_id=send_user_id,
                                 order_status='processing',  # 处理中状态
-                                cookie_id=self.cookie_id
+                                cookie_id=self.cookie_id,
+                                buyer_name=send_user_name or ''
                             )
                             logger.info(f"保存基本订单信息到数据库: {order_id}")
                 except Exception as db_e:
@@ -2585,9 +2626,18 @@ class XianyuLive:
 
                     # 增加发货次数统计
                     db_manager.increment_delivery_times(rule['id'])
+
+                    # 更新订单发货状态为成功
+                    if order_id:
+                        db_manager.update_order_delivery_status(order_id, 'delivered')
+
                     logger.info(f"自动发货成功: 规则ID={rule['id']}, 内容长度={len(final_content)}")
                     return final_content
                 else:
+                    # 更新订单发货状态为失败
+                    if order_id:
+                        db_manager.update_order_delivery_status(order_id, 'failed')
+
                     logger.warning(f"获取发货内容失败: 规则ID={rule['id']}")
                     return None
             else:
@@ -3381,6 +3431,31 @@ class XianyuLive:
                         else:
                             logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ 订单详情获取失败: {order_id}')
 
+                        # 同步保存商品信息到 item_info（用于发货规则匹配）
+                        if temp_item_id:
+                            try:
+                                existing_item = db_manager.get_item_info(self.cookie_id, temp_item_id)
+                                if not existing_item:
+                                    # 尝试从API获取商品标题
+                                    api_result = await self.get_item_info(temp_item_id)
+                                    if api_result and 'data' in api_result:
+                                        data = api_result['data']
+                                        item_data = data.get('itemDO', {})
+                                        share_data = item_data.get('shareData', {})
+                                        share_info_str = share_data.get('shareInfoJsonString', '')
+                                        item_title = ''
+                                        if share_info_str:
+                                            import json
+                                            share_info = json.loads(share_info_str)
+                                            item_title = share_info.get('contentParams', {}).get('mainParams', {}).get('content', '')
+                                        if not item_title:
+                                            item_title = item_data.get('title', '')
+                                        if item_title:
+                                            await self.save_item_info_to_db(temp_item_id, item_title, item_title)
+                                            logger.info(f'[{msg_time}] 【{self.cookie_id}】保存商品信息: {temp_item_id} -> {item_title[:50]}')
+                            except Exception as item_e:
+                                logger.debug(f"保存商品信息失败: {self._safe_str(item_e)}")
+
                     except Exception as detail_e:
                         logger.error(f'[{msg_time}] 【{self.cookie_id}】❌ 获取订单详情异常: {self._safe_str(detail_e)}')
                 else:
@@ -3537,10 +3612,38 @@ class XianyuLive:
                 return
             # 【重要】检查是否为自动发货触发消息 - 即使在人工接入暂停期间也要处理
             elif self._is_auto_delivery_trigger(send_message):
-                logger.info(f'[{msg_time}] 【{self.cookie_id}】检测到自动发货触发消息，即使在暂停期间也继续处理: {send_message}')
-                # 使用统一的自动发货处理方法
-                await self._handle_auto_delivery(websocket, message, send_user_name, send_user_id,
-                                               item_id, chat_id, msg_time)
+                # 检查当前账号是否是卖家（只有卖家才执行自动发货）
+                is_seller = True
+                try:
+                    message_3 = message.get("1", {}).get("3", {})
+                    if isinstance(message_3, dict):
+                        item_seller_id = message_3.get("itemSellerId", "")
+                        if item_seller_id and item_seller_id != self.myid:
+                            is_seller = False
+                            logger.info(f'[{msg_time}] 【{self.cookie_id}】当前账号不是卖家（卖家: {item_seller_id}），跳过自动发货')
+                except Exception:
+                    pass
+
+                # 从消息中提取 itemTitle 并保存到 item_info
+                if item_id and item_id != "未知商品":
+                    try:
+                        msg_item_title = None
+                        message_3 = message.get("1", {}).get("3", {})
+                        if isinstance(message_3, dict):
+                            msg_item_title = message_3.get("itemTitle", "")
+                        if msg_item_title:
+                            existing_item = db_manager.get_item_info(self.cookie_id, item_id)
+                            if not existing_item:
+                                await self.save_item_info_to_db(item_id, msg_item_title, msg_item_title)
+                                logger.info(f'[{msg_time}] 【{self.cookie_id}】从消息保存商品信息: {item_id} -> {msg_item_title[:50]}')
+                    except Exception as e:
+                        logger.debug(f"从消息保存商品信息失败: {self._safe_str(e)}")
+
+                if is_seller:
+                    logger.info(f'[{msg_time}] 【{self.cookie_id}】检测到自动发货触发消息，即使在暂停期间也继续处理: {send_message}')
+                    # 使用统一的自动发货处理方法
+                    await self._handle_auto_delivery(websocket, message, send_user_name, send_user_id,
+                                                   item_id, chat_id, msg_time)
                 return
             # 【重要】检查是否为"我已小刀，待刀成"卡片消息 - 即使在人工接入暂停期间也要处理
             elif send_message == '[卡片消息]':
@@ -3576,9 +3679,27 @@ class XianyuLive:
                                 from db_manager import db_manager
                                 item_info = db_manager.get_item_info(self.cookie_id, item_id)
                                 if not item_info:
-                                    logger.warning(f'[{msg_time}] 【{self.cookie_id}】❌ 商品 {item_id} 不属于当前账号，跳过免拼发货')
-                                    return
-                                logger.debug(f'[{msg_time}] 【{self.cookie_id}】✅ 商品 {item_id} 归属验证通过')
+                                    # 商品不在数据库中，尝试通过API获取并保存
+                                    logger.info(f'[{msg_time}] 【{self.cookie_id}】商品 {item_id} 不在数据库中，尝试通过API获取...')
+                                    try:
+                                        api_item_info = await self.get_item_info(item_id)
+                                        if api_item_info and 'data' in api_item_info:
+                                            data = api_item_info['data']
+                                            item_data = data.get('itemDO', {})
+                                            share_data = item_data.get('shareData', {})
+                                            share_info_str = share_data.get('shareInfoJsonString', '')
+                                            item_title_from_api = item_data.get('title', '')
+                                            if share_info_str or item_title_from_api:
+                                                await self.save_item_info_to_db(item_id, share_info_str or item_title_from_api, item_title_from_api or item_id)
+                                                logger.info(f'[{msg_time}] 【{self.cookie_id}】✅ 通过API获取并保存商品信息: {item_id}')
+                                            else:
+                                                logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API返回的商品信息为空，允许继续免拼发货')
+                                        else:
+                                            logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API获取商品信息失败，允许继续免拼发货')
+                                    except Exception as api_e:
+                                        logger.warning(f'[{msg_time}] 【{self.cookie_id}】⚠️ API获取商品信息异常: {self._safe_str(api_e)}，允许继续免拼发货')
+                                else:
+                                    logger.debug(f'[{msg_time}] 【{self.cookie_id}】✅ 商品 {item_id} 归属验证通过')
                             except Exception as e:
                                 logger.error(f'[{msg_time}] 【{self.cookie_id}】检查商品归属失败: {self._safe_str(e)}，跳过免拼发货')
                                 return
@@ -3615,8 +3736,8 @@ class XianyuLive:
                 return
 
             # 检查该chat_id是否处于暂停状态
-            if pause_manager.is_chat_paused(chat_id):
-                remaining_time = pause_manager.get_remaining_pause_time(chat_id)
+            if pause_manager.is_chat_paused(chat_id, self.cookie_id):
+                remaining_time = pause_manager.get_remaining_pause_time(chat_id, self.cookie_id)
                 remaining_minutes = remaining_time // 60
                 remaining_seconds = remaining_time % 60
                 logger.info(f"[{msg_time}] 【{self.cookie_id}】【系统】chat_id {chat_id} 自动回复已暂停，剩余时间: {remaining_minutes}分{remaining_seconds}秒")

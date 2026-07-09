@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>商品搜索 - 闲鱼管理系统</title>
+    <title>一键转卖 - 闲鱼管理系统</title>
     <link href="/static/lib/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link href="/static/lib/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -81,7 +81,7 @@
         <div class="container">
             <a class="navbar-brand" href="/index.html">
                 <i class="bi bi-search me-2"></i>
-                商品搜索
+                一键转卖
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/index.html">
@@ -104,10 +104,22 @@
         <div id="mainContent" style="display: none;">
         <!-- 搜索表单 -->
         <div class="search-form">
-            <h4 class="mb-4">
-                <i class="bi bi-search me-2"></i>
-                闲鱼商品搜索
-            </h4>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0">
+                    <i class="bi bi-search me-2"></i>
+                    一键转卖
+                </h4>
+                <div>
+                    <button type="button" class="btn btn-outline-success btn-sm me-2" onclick="showAgisoAccountManager()">
+                        <i class="bi bi-person-gear me-1"></i>
+                        阿奇索账户
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="showResellRecords()">
+                        <i class="bi bi-clock-history me-1"></i>
+                        转卖记录
+                    </button>
+                </div>
+            </div>
             <div class="alert alert-info mb-4">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>功能说明：</strong>
@@ -115,6 +127,7 @@
                     <li><strong>查询总页数：</strong>输入要获取的页数（1-20页），系统会一次性获取所有页面的数据</li>
                     <li><strong>每页显示：</strong>前端分页显示的每页商品数量</li>
                     <li><strong>数据来源：</strong>使用真实的闲鱼数据，通过浏览器自动化技术获取</li>
+                    <li><strong>一键转卖：</strong>搜索商品后，点击"转卖"按钮可将商品发布到阿奇索平台</li>
                 </ul>
             </div>
             <form id="searchForm">
@@ -204,6 +217,197 @@
             </div>
         </div>
     </div>
+
+    <!-- 转卖配置模态框 -->
+    <div class="modal fade" id="resellModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-shop me-2"></i>
+                        转卖到阿奇索
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 商品预览 -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex">
+                                <img id="resellItemImg" src="" class="me-3" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                                <div>
+                                    <h6 id="resellItemTitle" class="mb-1"></h6>
+                                    <p class="text-primary fw-bold mb-0" id="resellItemPrice"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 阿奇索账户选择 -->
+                    <div class="mb-3">
+                        <label class="form-label">阿奇索账户 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="resellAgisoAccount">
+                            <option value="">请选择阿奇索账户</option>
+                        </select>
+                        <div class="form-text">
+                            <a href="#" onclick="showAgisoAccountManager(); return false;">管理阿奇索账户</a>
+                        </div>
+                    </div>
+
+                    <!-- 转卖价格 -->
+                    <div class="mb-3">
+                        <label class="form-label">转卖价格 <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">¥</span>
+                            <input type="text" class="form-control" id="resellPrice" placeholder="请输入转卖价格">
+                        </div>
+                    </div>
+
+                    <!-- 库存数量 -->
+                    <div class="mb-3">
+                        <label class="form-label">库存数量</label>
+                        <input type="number" class="form-control" id="resellStock" value="1" min="1">
+                    </div>
+
+                    <!-- 商品描述 -->
+                    <div class="mb-3">
+                        <label class="form-label">商品描述</label>
+                        <textarea class="form-control" id="resellDescription" rows="3" placeholder="留空将使用原标题"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmResell()" id="resellConfirmBtn">
+                        <i class="bi bi-shop me-1"></i>
+                        确认转卖
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 阿奇索账户管理模态框 -->
+    <div class="modal fade" id="agisoAccountModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-person-gear me-2"></i>
+                        阿奇索账户管理
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- 获取指引 -->
+                    <div class="alert alert-primary mb-4">
+                        <h6 class="alert-heading mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            如何获取阿奇索 Cookie 和 Authorization？
+                        </h6>
+                        <ol class="mb-0" style="font-size: 0.9em;">
+                            <li class="mb-2">
+                                <strong>打开阿奇索官网</strong>
+                                <br>
+                                <a href="https://aldsidle.agiso.com/" target="_blank" class="text-decoration-none">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>https://aldsidle.agiso.com/
+                                </a>
+                            </li>
+                            <li class="mb-2">
+                                <strong>登录你的阿奇索账号</strong>
+                                <br>
+                                <span class="text-muted">如果还没使用过阿奇索，需要先用闲鱼账号进行产品绑定授权</span>
+                            </li>
+                            <li class="mb-2">
+                                <strong>打开浏览器开发者工具</strong>
+                                <br>
+                                <span class="text-muted">按 <code>F12</code> 键，或右键页面选择"检查"</span>
+                            </li>
+                            <li class="mb-2">
+                                <strong>找到网络请求</strong>
+                                <br>
+                                <span class="text-muted">选择"网络(Network)"标签，在过滤框中输入 <code>GetUserInfo</code></span>
+                            </li>
+                            <li class="mb-2">
+                                <strong>刷新页面并复制数据</strong>
+                                <br>
+                                <span class="text-muted">刷新网页，点击获取到的请求，在右侧"请求标头"中找到并复制：</span>
+                                <ul class="mt-1 mb-0">
+                                    <li><code>Cookie</code> 字段的完整内容</li>
+                                    <li><code>Authorization</code> 字段的完整内容</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <!-- 添加账户表单 -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            添加新账户
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">账户名称</label>
+                                <input type="text" class="form-control" id="agisoAccountName" placeholder="例如：我的阿奇索账户">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Cookie</label>
+                                <textarea class="form-control" id="agisoAccountCookie" rows="3" placeholder="粘贴从浏览器获取的Cookie内容"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Authorization</label>
+                                <input type="text" class="form-control" id="agisoAccountAuth" placeholder="粘贴从浏览器获取的Authorization内容">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="addAgisoAccount()">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                添加账户
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 账户列表 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-list-ul me-2"></i>
+                            已有账户
+                        </div>
+                        <div class="card-body">
+                            <div id="agisoAccountList">
+                                <!-- 账户列表将在这里动态加载 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 转卖记录模态框 -->
+    <div class="modal fade" id="resellRecordsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clock-history me-2"></i>
+                        转卖记录
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="resellRecordsList">
+                        <!-- 转卖记录将在这里动态加载 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     </div> <!-- 结束 mainContent -->
 
     <script src="/static/lib/bootstrap/bootstrap.bundle.min.js"></script>
@@ -898,6 +1102,10 @@
                                         <i class="bi bi-info-circle me-1"></i>
                                         详情
                                     </button>
+                                    <button class="btn btn-outline-success btn-sm" onclick='openResellModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
+                                        <i class="bi bi-shop me-1"></i>
+                                        转卖
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -948,6 +1156,347 @@
             // 显示模态框
             const modal = new bootstrap.Modal(document.getElementById('itemDetailModal'));
             modal.show();
+        }
+
+        // ========================= 转卖功能 =========================
+        
+        let currentResellItem = null;  // 当前要转卖的商品
+
+        // 打开转卖弹窗
+        function openResellModal(item) {
+            currentResellItem = item;
+            
+            // 填充商品信息
+            document.getElementById('resellItemTitle').textContent = item.title || '未知商品';
+            document.getElementById('resellItemPrice').textContent = item.price || '¥0';
+            
+            const img = document.getElementById('resellItemImg');
+            img.src = item.main_image || 'https://via.placeholder.com/80x80?text=暂无图片';
+            img.onerror = function() { this.src = 'https://via.placeholder.com/80x80?text=图片加载失败'; };
+            
+            // 预填价格（去掉¥符号）
+            const priceStr = (item.price || '').replace('¥', '').trim();
+            document.getElementById('resellPrice').value = priceStr;
+            
+            // 清空描述
+            document.getElementById('resellDescription').value = '';
+            document.getElementById('resellStock').value = '1';
+            
+            // 加载阿奇索账户列表
+            loadAgisoAccountsForResell();
+            
+            // 显示弹窗
+            const modal = new bootstrap.Modal(document.getElementById('resellModal'));
+            modal.show();
+        }
+
+        // 加载阿奇索账户列表（用于转卖弹窗）
+        async function loadAgisoAccountsForResell() {
+            const select = document.getElementById('resellAgisoAccount');
+            select.innerHTML = '<option value="">加载中...</option>';
+            
+            try {
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${apiBase}/agiso/accounts`, { headers });
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    select.innerHTML = '<option value="">请选择阿奇索账户</option>';
+                    result.data.forEach(account => {
+                        const option = document.createElement('option');
+                        option.value = account.id;
+                        option.textContent = account.name;
+                        select.appendChild(option);
+                    });
+                } else {
+                    select.innerHTML = '<option value="">暂无账户，请先添加</option>';
+                }
+            } catch (error) {
+                console.error('加载阿奇索账户失败:', error);
+                select.innerHTML = '<option value="">加载失败</option>';
+            }
+        }
+
+        // 确认转卖
+        async function confirmResell() {
+            if (!currentResellItem) {
+                alert('商品信息丢失，请重试');
+                return;
+            }
+            
+            const accountId = document.getElementById('resellAgisoAccount').value;
+            const price = document.getElementById('resellPrice').value.trim();
+            const stock = parseInt(document.getElementById('resellStock').value) || 1;
+            const description = document.getElementById('resellDescription').value.trim();
+            
+            if (!accountId) {
+                alert('请选择阿奇索账户');
+                return;
+            }
+            
+            if (!price) {
+                alert('请输入转卖价格');
+                return;
+            }
+            
+            // 禁用按钮，显示加载状态
+            const confirmBtn = document.getElementById('resellConfirmBtn');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>发布中...';
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const requestData = {
+                    agiso_account_id: parseInt(accountId),
+                    source_item: currentResellItem,
+                    resell_price: price,
+                    stock: stock,
+                    description: description || currentResellItem.title || ''
+                };
+                
+                const response = await fetch(`${apiBase}/resell/publish`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('转卖成功！');
+                    // 关闭弹窗
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('resellModal'));
+                    modal.hide();
+                } else {
+                    alert('转卖失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('转卖请求失败:', error);
+                alert('转卖请求失败: ' + error.message);
+            } finally {
+                // 恢复按钮状态
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
+            }
+        }
+
+        // 显示阿奇索账户管理弹窗
+        function showAgisoAccountManager() {
+            // 关闭转卖弹窗
+            const resellModal = bootstrap.Modal.getInstance(document.getElementById('resellModal'));
+            if (resellModal) resellModal.hide();
+            
+            // 加载账户列表
+            loadAgisoAccounts();
+            
+            // 显示管理弹窗
+            const modal = new bootstrap.Modal(document.getElementById('agisoAccountModal'));
+            modal.show();
+        }
+
+        // 加载阿奇索账户列表
+        async function loadAgisoAccounts() {
+            const listDiv = document.getElementById('agisoAccountList');
+            listDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+            
+            try {
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${apiBase}/agiso/accounts`, { headers });
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table table-hover">';
+                    html += '<thead><tr><th>名称</th><th>Cookie</th><th>Authorization</th><th>状态</th><th>操作</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    result.data.forEach(account => {
+                        html += `
+                            <tr>
+                                <td>${escapeHtml(account.name)}</td>
+                                <td><code>${escapeHtml(account.cookie || '')}</code></td>
+                                <td><code>${escapeHtml(account.authorization || '')}</code></td>
+                                <td><span class="badge bg-success">有效</span></td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAgisoAccount(${account.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    listDiv.innerHTML = html;
+                } else {
+                    listDiv.innerHTML = '<div class="text-muted text-center py-3">暂无阿奇索账户，请添加</div>';
+                }
+            } catch (error) {
+                console.error('加载阿奇索账户失败:', error);
+                listDiv.innerHTML = '<div class="text-danger text-center py-3">加载失败</div>';
+            }
+        }
+
+        // 添加阿奇索账户
+        async function addAgisoAccount() {
+            const name = document.getElementById('agisoAccountName').value.trim();
+            const cookie = document.getElementById('agisoAccountCookie').value.trim();
+            const authorization = document.getElementById('agisoAccountAuth').value.trim();
+            
+            if (!name) {
+                alert('请输入账户名称');
+                return;
+            }
+            
+            if (!cookie) {
+                alert('请输入Cookie');
+                return;
+            }
+            
+            if (!authorization) {
+                alert('请输入Authorization');
+                return;
+            }
+            
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${apiBase}/agiso/accounts`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ name, cookie, authorization })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('添加成功');
+                    // 清空表单
+                    document.getElementById('agisoAccountName').value = '';
+                    document.getElementById('agisoAccountCookie').value = '';
+                    document.getElementById('agisoAccountAuth').value = '';
+                    // 重新加载列表
+                    loadAgisoAccounts();
+                } else {
+                    alert('添加失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('添加阿奇索账户失败:', error);
+                alert('添加失败: ' + error.message);
+            }
+        }
+
+        // 删除阿奇索账户
+        async function deleteAgisoAccount(accountId) {
+            if (!confirm('确定要删除这个账户吗？')) {
+                return;
+            }
+            
+            try {
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${apiBase}/agiso/accounts/${accountId}`, {
+                    method: 'DELETE',
+                    headers: headers
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('删除成功');
+                    loadAgisoAccounts();
+                } else {
+                    alert('删除失败: ' + (result.message || '未知错误'));
+                }
+            } catch (error) {
+                console.error('删除阿奇索账户失败:', error);
+                alert('删除失败: ' + error.message);
+            }
+        }
+
+        // 显示转卖记录
+        function showResellRecords() {
+            loadResellRecords();
+            const modal = new bootstrap.Modal(document.getElementById('resellRecordsModal'));
+            modal.show();
+        }
+
+        // 加载转卖记录
+        async function loadResellRecords() {
+            const listDiv = document.getElementById('resellRecordsList');
+            listDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+            
+            try {
+                const headers = {};
+                if (authToken) {
+                    headers['Authorization'] = `Bearer ${authToken}`;
+                }
+                
+                const response = await fetch(`${apiBase}/resell/records`, { headers });
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table table-hover">';
+                    html += '<thead><tr><th>商品名称</th><th>原价</th><th>转卖价</th><th>状态</th><th>时间</th></tr></thead>';
+                    html += '<tbody>';
+                    
+                    result.data.forEach(record => {
+                        const statusClass = {
+                            'pending': 'warning',
+                            'processing': 'info',
+                            'success': 'success',
+                            'failed': 'danger'
+                        }[record.status] || 'secondary';
+                        
+                        const statusText = {
+                            'pending': '待处理',
+                            'processing': '处理中',
+                            'success': '成功',
+                            'failed': '失败'
+                        }[record.status] || record.status;
+                        
+                        html += `
+                            <tr>
+                                <td>${escapeHtml(record.source_title || '-')}</td>
+                                <td>${escapeHtml(record.source_price || '-')}</td>
+                                <td>${escapeHtml(record.resell_price || '-')}</td>
+                                <td><span class="badge bg-${statusClass}">${statusText}</span></td>
+                                <td>${escapeHtml(record.created_at || '-')}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    listDiv.innerHTML = html;
+                } else {
+                    listDiv.innerHTML = '<div class="text-muted text-center py-3">暂无转卖记录</div>';
+                }
+            } catch (error) {
+                console.error('加载转卖记录失败:', error);
+                listDiv.innerHTML = '<div class="text-danger text-center py-3">加载失败</div>';
+            }
         }
     </script>
 </body>

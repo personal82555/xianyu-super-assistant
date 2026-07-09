@@ -6,6 +6,7 @@ AI回复引擎模块
 import os
 import json
 import time
+import hashlib
 import sqlite3
 from typing import List, Dict, Optional
 from loguru import logger
@@ -19,7 +20,46 @@ class AIReplyEngine:
     def __init__(self):
         self.clients = {}  # 存储不同账号的OpenAI客户端
         self.agents = {}   # 存储不同账号的Agent实例
+        self._cache = {}   # AI回复缓存 {cache_key: (reply, expiry)}
+        self._intent_cache = {}  # 意图缓存 {cache_key: (intent, expiry)}
+        self._cache_ttl = 3600  # 缓存有效期1小时
         self._init_default_prompts()
+
+    def _make_cache_key(self, cookie_id: str, chat_id: str, message: str) -> str:
+        """生成缓存键"""
+        raw = f"{cookie_id}|{chat_id}|{message}"
+        return hashlib.md5(raw.encode()).hexdigest()
+
+    def _get_cached_reply(self, cookie_id: str, chat_id: str, message: str) -> Optional[str]:
+        """获取缓存的AI回复"""
+        key = self._make_cache_key(cookie_id, chat_id, message)
+        cached = self._cache.get(key)
+        if cached and time.time() < cached[1]:
+            logger.info(f"命中AI回复缓存 (账号: {cookie_id})")
+            return cached[0]
+        if cached:
+            del self._cache[key]
+        return None
+
+    def _set_cached_reply(self, cookie_id: str, chat_id: str, message: str, reply: str):
+        """设置AI回复缓存"""
+        key = self._make_cache_key(cookie_id, chat_id, message)
+        self._cache[key] = (reply, time.time() + self._cache_ttl)
+
+    def _get_cached_intent(self, cookie_id: str, message: str) -> Optional[str]:
+        """获取缓存的意图"""
+        key = self._make_cache_key(cookie_id, "", message)
+        cached = self._intent_cache.get(key)
+        if cached and time.time() < cached[1]:
+            return cached[0]
+        if cached:
+            del self._intent_cache[key]
+        return None
+
+    def _set_cached_intent(self, cookie_id: str, message: str, intent: str):
+        """设置意图缓存"""
+        key = self._make_cache_key(cookie_id, "", message)
+        self._intent_cache[key] = (intent, time.time() + self._cache_ttl)
     
     def _init_default_prompts(self):
         """初始化默认提示词"""
@@ -61,13 +101,18 @@ class AIReplyEngine:
         """获取指定账号的OpenAI客户端"""
         if cookie_id not in self.clients:
             settings = db_manager.get_ai_reply_settings(cookie_id)
-            if not settings['ai_enabled'] or not settings['api_key']:
+            if not settings['ai_enabled']:
+                logger.warning(f"AI回复未启用 (账号: {cookie_id})")
+                return None
+            if not settings['api_key']:
+                logger.warning(f"AI回复的 API Key 未配置 (账号: {cookie_id})")
                 return None
             
             try:
                 self.clients[cookie_id] = OpenAI(
                     api_key=settings['api_key'],
-                    base_url=settings['base_url']
+                    base_url=settings['base_url'],
+                    timeout=60
                 )
                 logger.info(f"为账号 {cookie_id} 创建OpenAI客户端")
             except Exception as e:
@@ -82,7 +127,11 @@ class AIReplyEngine:
         return settings['ai_enabled']
     
     def detect_intent(self, message: str, cookie_id: str) -> str:
-        """检测用户消息意图"""
+        """检测用户消息意图（带缓存）"""
+        cached = self._get_cached_intent(cookie_id, message)
+        if cached:
+            return cached
+
         client = self.get_client(cookie_id)
         if not client:
             return 'default'
@@ -102,11 +151,13 @@ class AIReplyEngine:
                 temperature=0.1
             )
             
-            intent = response.choices[0].message.content.strip().lower()
-            if intent in ['price', 'tech', 'refund', 'default']:
-                return intent
-            else:
-                return 'default'
+            raw_content = response.choices[0].message.content
+            intent = raw_content.strip().lower() if raw_content else 'default'
+            if intent not in ['price', 'tech', 'refund', 'default']:
+                intent = 'default'
+
+            self._set_cached_intent(cookie_id, message, intent)
+            return intent
                 
         except Exception as e:
             logger.error(f"意图检测失败 {cookie_id}: {e}")
@@ -114,67 +165,70 @@ class AIReplyEngine:
     
     def generate_reply(self, message: str, item_info: dict, chat_id: str, 
                       cookie_id: str, user_id: str, item_id: str) -> Optional[str]:
-        """生成AI回复"""
+        """生成AI回复（带缓存，带重试）"""
         if not self.is_ai_enabled(cookie_id):
             return None
-        
+
+        # 检查缓存
+        cached_reply = self._get_cached_reply(cookie_id, chat_id, message)
+        if cached_reply:
+            return cached_reply
+
         client = self.get_client(cookie_id)
         if not client:
+            logger.warning(f"生成AI回复失败: 无法获取 OpenAI 客户端 (账号: {cookie_id})")
             return None
         
+        # 获取设置（重试参数也放在 settings 里）
         try:
-            # 1. 获取AI回复设置
             settings = db_manager.get_ai_reply_settings(cookie_id)
+        except Exception as e:
+            logger.error(f"获取AI回复设置失败 {cookie_id}: {e}")
+            return None
 
-            # 2. 检测意图
-            intent = self.detect_intent(message, cookie_id)
-            logger.info(f"检测到意图: {intent} (账号: {cookie_id})")
+        # 读取重试配置
+        max_retry = 3
+        retry_interval = 5
 
-            # 3. 获取对话历史
-            context = self.get_conversation_context(chat_id, cookie_id)
+        # 检测意图
+        intent = self.detect_intent(message, cookie_id)
+        logger.info(f"检测到意图: {intent} (账号: {cookie_id})")
 
-            # 4. 获取议价次数
-            bargain_count = self.get_bargain_count(chat_id, cookie_id)
+        # 获取对话历史和议价信息（在重试循环外，只做一次）
+        context = self.get_conversation_context(chat_id, cookie_id)
+        bargain_count = self.get_bargain_count(chat_id, cookie_id)
+        refund_policy = settings.get('refund_policy', 'allow')
 
-            # 4.5 判断退款策略
-            refund_policy = settings.get('refund_policy', 'allow')
-
-            # 5. 检查议价轮数限制
-            if intent == "price":
-                max_bargain_rounds = settings.get('max_bargain_rounds', 3)
-                if bargain_count >= max_bargain_rounds:
-                    logger.info(f"议价次数已达上限 ({bargain_count}/{max_bargain_rounds})，拒绝继续议价")
-                    # 返回拒绝议价的回复
-                    refuse_reply = f"抱歉，这个价格已经是最优惠的了，不能再便宜了哦！"
-                    # 保存对话记录
-                    self.save_conversation(chat_id, cookie_id, user_id, item_id, "user", message, intent)
-                    self.save_conversation(chat_id, cookie_id, user_id, item_id, "assistant", refuse_reply, intent)
-                    return refuse_reply
-
-            # 6. 构建提示词
-            custom_prompts = json.loads(settings['custom_prompts']) if settings['custom_prompts'] else {}
-            system_prompt = custom_prompts.get(intent, self.default_prompts[intent])
-
-            # 7. 构建商品信息
-            item_desc = f"商品标题: {item_info.get('title', '未知')}\n"
-            item_desc += f"商品价格: {item_info.get('price', '未知')}元\n"
-            item_desc += f"商品描述: {item_info.get('desc', '无')}"
-
-            # 8. 构建对话历史
-            context_str = "\n".join([f"{msg['role']}: {msg['content']}" for msg in context[-10:]])  # 最近10条
-
-            # 9. 构建用户消息
+        # 检查议价轮数限制
+        if intent == "price":
             max_bargain_rounds = settings.get('max_bargain_rounds', 3)
-            max_discount_percent = settings.get('max_discount_percent', 10)
-            max_discount_amount = settings.get('max_discount_amount', 100)
+            if bargain_count >= max_bargain_rounds:
+                logger.info(f"议价次数已达上限 ({bargain_count}/{max_bargain_rounds})，拒绝继续议价")
+                refuse_reply = "抱歉，这个价格已经是最优惠的了，不能再便宜了哦！"
+                self.save_conversation(chat_id, cookie_id, user_id, item_id, "user", message, intent)
+                self.save_conversation(chat_id, cookie_id, user_id, item_id, "assistant", refuse_reply, intent)
+                return refuse_reply
 
-            refund_instruction = "" if intent != "refund" else (
-                "【退款策略】该商品支持退款，请引导用户通过平台申请退款，告知流程和预计时间。"
-                if refund_policy == "allow"
-                else "【退款策略】该商品不支持退款，请礼貌说明原因（虚拟商品/已发货/特殊商品等），并表示歉意。"
-            )
+        # 构建提示词相关（在重试循环外，只做一次）
+        custom_prompts = json.loads(settings['custom_prompts']) if settings.get('custom_prompts') else {}
+        system_prompt = custom_prompts.get(intent, self.default_prompts[intent])
 
-            user_prompt = f"""商品信息：
+        item_desc = f"商品标题: {item_info.get('title', '未知')}\n"
+        item_desc += f"商品价格: {item_info.get('price', '未知')}元\n"
+        item_desc += f"商品描述: {item_info.get('desc', '无')}"
+
+        context_str = "\n".join([f"{msg['role']}: {msg['content']}" for msg in context[-10:]])
+        max_bargain_rounds = settings.get('max_bargain_rounds', 3)
+        max_discount_percent = settings.get('max_discount_percent', 10)
+        max_discount_amount = settings.get('max_discount_amount', 100)
+
+        refund_instruction = "" if intent != "refund" else (
+            "【退款策略】该商品支持退款，请引导用户通过平台申请退款，告知流程和预计时间。"
+            if refund_policy == "allow"
+            else "【退款策略】该商品不支持退款，请礼貌说明原因（虚拟商品/已发货/特殊商品等），并表示歉意。"
+        )
+
+        user_prompt = f"""商品信息：
 {item_desc}
 
 对话历史：
@@ -192,33 +246,48 @@ class AIReplyEngine:
 
 请根据以上信息生成回复："""
 
-            # 10. 调用AI生成回复
-            response = client.chat.completions.create(
-                model=settings['model_name'],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=2048,
-                temperature=0.7
-            )
+        # === 带重试的 API 调用 ===
+        last_error = None
+        for attempt in range(max_retry):
+            try:
+                response = client.chat.completions.create(
+                    model=settings['model_name'],
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    max_tokens=2048,
+                    temperature=0.7
+                )
 
-            reply = response.choices[0].message.content.strip()
+                raw_reply = response.choices[0].message.content
+                if not raw_reply:
+                    raise ValueError("AI 返回内容为空")
+                reply = raw_reply.strip()
 
-            # 11. 保存对话记录
-            self.save_conversation(chat_id, cookie_id, user_id, item_id, "user", message, intent)
-            self.save_conversation(chat_id, cookie_id, user_id, item_id, "assistant", reply, intent)
+                # 保存对话记录
+                self.save_conversation(chat_id, cookie_id, user_id, item_id, "user", message, intent)
+                self.save_conversation(chat_id, cookie_id, user_id, item_id, "assistant", reply, intent)
 
-            # 12. 更新议价次数
-            if intent == "price":
-                self.increment_bargain_count(chat_id, cookie_id)
-            
-            logger.info(f"AI回复生成成功 (账号: {cookie_id}): {reply}")
-            return reply
-            
-        except Exception as e:
-            logger.error(f"AI回复生成失败 {cookie_id}: {e}")
-            return None
+                # 更新议价次数
+                if intent == "price":
+                    self.increment_bargain_count(chat_id, cookie_id)
+
+                # 写入缓存
+                self._set_cached_reply(cookie_id, chat_id, message, reply)
+
+                logger.info(f"AI回复生成成功 (账号: {cookie_id}): {reply}")
+                return reply
+
+            except Exception as e:
+                last_error = e
+                if attempt < max_retry - 1:
+                    logger.warning(f"AI回复生成失败 (第{attempt + 1}/{max_retry}次重试) {cookie_id}: {e}")
+                    time.sleep(retry_interval)
+                else:
+                    logger.error(f"AI回复生成失败 (已重试{max_retry}次) {cookie_id}: {e}")
+
+        return None
     
     def get_conversation_context(self, chat_id: str, cookie_id: str, limit: int = 20) -> List[Dict]:
         """获取对话上下文"""
@@ -275,6 +344,18 @@ class AIReplyEngine:
         # 议价次数通过查询price意图的用户消息数量来计算，无需单独操作
         pass
     
+    def clear_cache(self, cookie_id: str = None):
+        """清理AI回复和意图缓存"""
+        if cookie_id:
+            prefix = hashlib.md5(f"{cookie_id}|".encode()).hexdigest()[:8]
+            self._cache = {k: v for k, v in self._cache.items() if not k.startswith(prefix)}
+            self._intent_cache = {k: v for k, v in self._intent_cache.items() if not k.startswith(prefix)}
+            logger.info(f"清理账号 {cookie_id} 的AI回复缓存")
+        else:
+            self._cache.clear()
+            self._intent_cache.clear()
+            logger.info("清理所有AI回复缓存")
+
     def clear_client_cache(self, cookie_id: str = None):
         """清理客户端缓存"""
         if cookie_id:

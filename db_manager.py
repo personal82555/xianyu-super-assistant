@@ -260,6 +260,23 @@ class DBManager:
                 self._execute_sql(cursor, "ALTER TABLE keywords ADD COLUMN item_id TEXT")
                 logger.info("keywords 表 item_id 列添加完成")
 
+            # 检查并添加 delivery_status 列（用于订单发货状态跟踪）
+            try:
+                self._execute_sql(cursor, "SELECT delivery_status FROM orders LIMIT 1")
+            except sqlite3.OperationalError:
+                # delivery_status 列不存在，需要添加
+                logger.info("正在为 orders 表添加 delivery_status 列...")
+                self._execute_sql(cursor, "ALTER TABLE orders ADD COLUMN delivery_status TEXT DEFAULT 'pending'")
+                logger.info("orders 表 delivery_status 列添加完成")
+
+            # 检查并添加 buyer_name 列（用于存储买家昵称）
+            try:
+                self._execute_sql(cursor, "SELECT buyer_name FROM orders LIMIT 1")
+            except sqlite3.OperationalError:
+                logger.info("正在为 orders 表添加 buyer_name 列...")
+                self._execute_sql(cursor, "ALTER TABLE orders ADD COLUMN buyer_name TEXT DEFAULT ''")
+                logger.info("orders 表 buyer_name 列添加完成")
+
             # 创建商品信息表
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS item_info (
@@ -403,6 +420,42 @@ class DBManager:
             )
             ''')
 
+            # 创建阿奇索账户表
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS agiso_accounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                cookie TEXT NOT NULL,
+                authorization TEXT NOT NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            ''')
+
+            # 创建转卖记录表
+            cursor.execute('''
+            CREATE TABLE IF NOT EXISTS resell_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                agiso_account_id INTEGER NOT NULL,
+                source_item_id TEXT NOT NULL,
+                source_title TEXT,
+                source_price TEXT,
+                source_image TEXT,
+                resell_price TEXT,
+                resell_stock INTEGER DEFAULT 1,
+                resell_description TEXT,
+                status TEXT DEFAULT 'pending',
+                agiso_item_id TEXT,
+                error_message TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (agiso_account_id) REFERENCES agiso_accounts(id) ON DELETE CASCADE
+            )
+            ''')
+
             # 插入默认系统设置（不包括管理员密码，由reply_server.py初始化）
             cursor.execute('''
             INSERT OR IGNORE INTO system_settings (key, value, description) VALUES
@@ -468,6 +521,18 @@ class DBManager:
                 logger.info("添加cookies表的pause_duration列...")
                 cursor.execute("ALTER TABLE cookies ADD COLUMN pause_duration INTEGER DEFAULT 10")
                 logger.info("数据库迁移完成：添加pause_duration列")
+
+            # 检查cookies表是否存在nickname列
+            if 'nickname' not in cookie_columns:
+                logger.info("添加cookies表的nickname列...")
+                cursor.execute("ALTER TABLE cookies ADD COLUMN nickname TEXT DEFAULT ''")
+                logger.info("数据库迁移完成：添加nickname列")
+
+            # 检查cookies表是否存在avatar_url列
+            if 'avatar_url' not in cookie_columns:
+                logger.info("添加cookies表的avatar_url列...")
+                cursor.execute("ALTER TABLE cookies ADD COLUMN avatar_url TEXT DEFAULT ''")
+                logger.info("数据库迁移完成：添加avatar_url列")
 
         except Exception as e:
             logger.error(f"数据库迁移失败: {e}")
@@ -1136,6 +1201,39 @@ class DBManager:
                 self.conn.rollback()
                 return False
 
+    def update_cookie_user_info(self, cookie_id: str, nickname: str = None, avatar_url: str = None) -> bool:
+        """更新Cookie的用户信息（昵称和头像）"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                
+                updates = []
+                params = []
+                
+                if nickname is not None:
+                    updates.append("nickname = ?")
+                    params.append(nickname)
+                
+                if avatar_url is not None:
+                    updates.append("avatar_url = ?")
+                    params.append(avatar_url)
+                
+                if not updates:
+                    return False
+                
+                params.append(cookie_id)
+                sql = f"UPDATE cookies SET {', '.join(updates)} WHERE id = ?"
+                
+                self._execute_sql(cursor, sql, params)
+                self.conn.commit()
+                
+                logger.info(f"Cookie用户信息更新成功: {cookie_id}, nickname={nickname}, avatar_url={avatar_url}")
+                return True
+            except Exception as e:
+                logger.error(f"Cookie用户信息更新失败: {e}")
+                self.conn.rollback()
+                return False
+
     
     def delete_cookie(self, cookie_id: str) -> bool:
         """从数据库删除Cookie及其关键字"""
@@ -1213,7 +1311,7 @@ class DBManager:
         with self.lock:
             try:
                 cursor = self.conn.cursor()
-                self._execute_sql(cursor, "SELECT id, value, user_id, auto_confirm, remark, pause_duration, created_at FROM cookies WHERE id = ?", (cookie_id,))
+                self._execute_sql(cursor, "SELECT id, value, user_id, auto_confirm, remark, pause_duration, created_at, nickname, avatar_url FROM cookies WHERE id = ?", (cookie_id,))
                 result = cursor.fetchone()
                 if result:
                     return {
@@ -1223,7 +1321,9 @@ class DBManager:
                         'auto_confirm': bool(result[3]),
                         'remark': result[4] or '',
                         'pause_duration': result[5] or 10,
-                        'created_at': result[6]
+                        'created_at': result[6],
+                        'nickname': result[7] or '',
+                        'avatar_url': result[8] or ''
                     }
                 return None
             except Exception as e:
@@ -1296,7 +1396,227 @@ class DBManager:
             except Exception as e:
                 logger.error(f"获取自动确认发货设置失败: {e}")
                 return True  # 出错时默认开启
-    
+
+    # -------------------- 阿奇索账户操作 --------------------
+    def add_agiso_account(self, user_id: int, name: str, cookie: str, authorization: str) -> int:
+        """添加阿奇索账户"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    "INSERT INTO agiso_accounts (user_id, name, cookie, authorization) VALUES (?, ?, ?, ?)",
+                    (user_id, name, cookie, authorization))
+                self.conn.commit()
+                account_id = cursor.lastrowid
+                logger.info(f"添加阿奇索账户成功: id={account_id}, name={name}")
+                return account_id
+            except Exception as e:
+                logger.error(f"添加阿奇索账户失败: {e}")
+                return -1
+
+    def get_agiso_accounts(self, user_id: int) -> List[Dict[str, Any]]:
+        """获取用户的所有阿奇索账户"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    "SELECT id, name, cookie, authorization, is_active, created_at FROM agiso_accounts WHERE user_id = ?",
+                    (user_id,))
+                return [
+                    {
+                        "id": row[0],
+                        "name": row[1],
+                        "cookie": row[2],
+                        "authorization": row[3],
+                        "is_active": bool(row[4]),
+                        "created_at": row[5]
+                    }
+                    for row in cursor.fetchall()
+                ]
+            except Exception as e:
+                logger.error(f"获取阿奇索账户列表失败: {e}")
+                return []
+
+    def get_agiso_account_by_id(self, account_id: int) -> Optional[Dict[str, Any]]:
+        """根据ID获取阿奇索账户"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    "SELECT id, user_id, name, cookie, authorization, is_active, created_at FROM agiso_accounts WHERE id = ?",
+                    (account_id,))
+                result = cursor.fetchone()
+                if result:
+                    return {
+                        "id": result[0],
+                        "user_id": result[1],
+                        "name": result[2],
+                        "cookie": result[3],
+                        "authorization": result[4],
+                        "is_active": bool(result[5]),
+                        "created_at": result[6]
+                    }
+                return None
+            except Exception as e:
+                logger.error(f"获取阿奇索账户失败: {e}")
+                return None
+
+    def update_agiso_account(self, account_id: int, name: str = None, cookie: str = None, authorization: str = None) -> bool:
+        """更新阿奇索账户"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                updates = []
+                params = []
+                if name is not None:
+                    updates.append("name = ?")
+                    params.append(name)
+                if cookie is not None:
+                    updates.append("cookie = ?")
+                    params.append(cookie)
+                if authorization is not None:
+                    updates.append("authorization = ?")
+                    params.append(authorization)
+                if not updates:
+                    return False
+                params.append(account_id)
+                self._execute_sql(cursor,
+                    f"UPDATE agiso_accounts SET {', '.join(updates)} WHERE id = ?",
+                    tuple(params))
+                self.conn.commit()
+                logger.info(f"更新阿奇索账户成功: id={account_id}")
+                return True
+            except Exception as e:
+                logger.error(f"更新阿奇索账户失败: {e}")
+                return False
+
+    def delete_agiso_account(self, account_id: int) -> bool:
+        """删除阿奇索账户"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor, "DELETE FROM agiso_accounts WHERE id = ?", (account_id,))
+                self.conn.commit()
+                logger.info(f"删除阿奇索账户成功: id={account_id}")
+                return True
+            except Exception as e:
+                logger.error(f"删除阿奇索账户失败: {e}")
+                return False
+
+    # -------------------- 转卖记录操作 --------------------
+    def add_resell_record(self, user_id: int, agiso_account_id: int, source_item_id: str,
+                          source_title: str = None, source_price: str = None, source_image: str = None,
+                          resell_price: str = None, resell_stock: int = 1, resell_description: str = None) -> int:
+        """添加转卖记录"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    """INSERT INTO resell_records 
+                       (user_id, agiso_account_id, source_item_id, source_title, source_price, 
+                        source_image, resell_price, resell_stock, resell_description) 
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (user_id, agiso_account_id, source_item_id, source_title, source_price,
+                     source_image, resell_price, resell_stock, resell_description))
+                self.conn.commit()
+                record_id = cursor.lastrowid
+                logger.info(f"添加转卖记录成功: id={record_id}, item={source_item_id}")
+                return record_id
+            except Exception as e:
+                logger.error(f"添加转卖记录失败: {e}")
+                return -1
+
+    def update_resell_record_status(self, record_id: int, status: str, agiso_item_id: str = None, error_message: str = None) -> bool:
+        """更新转卖记录状态"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    "UPDATE resell_records SET status = ?, agiso_item_id = ?, error_message = ? WHERE id = ?",
+                    (status, agiso_item_id, error_message, record_id))
+                self.conn.commit()
+                logger.info(f"更新转卖记录状态: id={record_id}, status={status}")
+                return True
+            except Exception as e:
+                logger.error(f"更新转卖记录状态失败: {e}")
+                return False
+
+    def get_resell_records(self, user_id: int, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """获取用户的转卖记录"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    """SELECT r.id, r.agiso_account_id, a.name as account_name, r.source_item_id, 
+                       r.source_title, r.source_price, r.source_image, r.resell_price, 
+                       r.resell_stock, r.resell_description, r.status, r.agiso_item_id, 
+                       r.error_message, r.created_at
+                       FROM resell_records r
+                       LEFT JOIN agiso_accounts a ON r.agiso_account_id = a.id
+                       WHERE r.user_id = ?
+                       ORDER BY r.created_at DESC
+                       LIMIT ? OFFSET ?""",
+                    (user_id, limit, offset))
+                return [
+                    {
+                        "id": row[0],
+                        "agiso_account_id": row[1],
+                        "account_name": row[2],
+                        "source_item_id": row[3],
+                        "source_title": row[4],
+                        "source_price": row[5],
+                        "source_image": row[6],
+                        "resell_price": row[7],
+                        "resell_stock": row[8],
+                        "resell_description": row[9],
+                        "status": row[10],
+                        "agiso_item_id": row[11],
+                        "error_message": row[12],
+                        "created_at": row[13]
+                    }
+                    for row in cursor.fetchall()
+                ]
+            except Exception as e:
+                logger.error(f"获取转卖记录失败: {e}")
+                return []
+
+    def get_resell_record_by_id(self, record_id: int) -> Optional[Dict[str, Any]]:
+        """根据ID获取转卖记录"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                self._execute_sql(cursor,
+                    """SELECT r.id, r.agiso_account_id, a.name as account_name, r.source_item_id, 
+                       r.source_title, r.source_price, r.source_image, r.resell_price, 
+                       r.resell_stock, r.resell_description, r.status, r.agiso_item_id, 
+                       r.error_message, r.created_at
+                       FROM resell_records r
+                       LEFT JOIN agiso_accounts a ON r.agiso_account_id = a.id
+                       WHERE r.id = ?""",
+                    (record_id,))
+                result = cursor.fetchone()
+                if result:
+                    return {
+                        "id": result[0],
+                        "agiso_account_id": result[1],
+                        "account_name": result[2],
+                        "source_item_id": result[3],
+                        "source_title": result[4],
+                        "source_price": result[5],
+                        "source_image": result[6],
+                        "resell_price": result[7],
+                        "resell_stock": result[8],
+                        "resell_description": result[9],
+                        "status": result[10],
+                        "agiso_item_id": result[11],
+                        "error_message": result[12],
+                        "created_at": result[13]
+                    }
+                return None
+            except Exception as e:
+                logger.error(f"获取转卖记录失败: {e}")
+                return None
+
     # -------------------- 关键字操作 --------------------
     def save_keywords(self, cookie_id: str, keywords: List[Tuple[str, str]]) -> bool:
         """保存关键字列表，先删除旧数据再插入新数据（向后兼容方法）"""
@@ -1638,9 +1958,9 @@ class DBManager:
                 if result:
                     return {
                         'ai_enabled': bool(result[0]),
-                        'model_name': result[1],
-                        'api_key': result[2],
-                        'base_url': result[3],
+                        'model_name': result[1] or 'qwen-plus',
+                        'api_key': result[2] or '',
+                        'base_url': result[3] or 'https://dashscope.aliyuncs.com/compatible-mode/v1',
                         'max_discount_percent': result[4],
                         'max_discount_amount': result[5],
                         'max_bargain_rounds': result[6],
@@ -1662,7 +1982,7 @@ class DBManager:
                 cursor.execute('''
                 SELECT cookie_id, ai_enabled, model_name, api_key, base_url,
                        max_discount_percent, max_discount_amount, max_bargain_rounds,
-                       custom_prompts
+                       custom_prompts, refund_policy
                 FROM ai_reply_settings
                 ''')
 
@@ -1672,12 +1992,13 @@ class DBManager:
                     result[cookie_id] = {
                         'ai_enabled': bool(row[1]),
                         'model_name': row[2],
-                        'api_key': row[3],
+                        'api_key': row[3] or '',
                         'base_url': row[4],
                         'max_discount_percent': row[5],
                         'max_discount_amount': row[6],
                         'max_bargain_rounds': row[7],
-                        'custom_prompts': row[8]
+                        'custom_prompts': row[8],
+                        'refund_policy': row[9] or 'allow'
                     }
 
                 return result
@@ -2408,8 +2729,8 @@ class DBManager:
         返回: (验证码文本, base64编码的图片)
         """
         try:
-            # 生成4位随机验证码（数字+字母）
-            chars = string.ascii_uppercase + string.digits
+            # 生成4位随机数字验证码
+            chars = string.digits
             captcha_text = ''.join(random.choices(chars, k=4))
 
             # 创建图片
@@ -4375,7 +4696,8 @@ class DBManager:
 
     def insert_or_update_order(self, order_id: str, item_id: str = None, buyer_id: str = None,
                               spec_name: str = None, spec_value: str = None, quantity: str = None,
-                              amount: str = None, order_status: str = None, cookie_id: str = None):
+                              amount: str = None, order_status: str = None, cookie_id: str = None,
+                              delivery_status: str = None, buyer_name: str = None):
         """插入或更新订单信息"""
         with self.lock:
             try:
@@ -4422,6 +4744,12 @@ class DBManager:
                     if cookie_id is not None:
                         update_fields.append("cookie_id = ?")
                         update_values.append(cookie_id)
+                    if delivery_status is not None:
+                        update_fields.append("delivery_status = ?")
+                        update_values.append(delivery_status)
+                    if buyer_name is not None and buyer_name != '':
+                        update_fields.append("buyer_name = ?")
+                        update_values.append(buyer_name)
 
                     if update_fields:
                         update_fields.append("updated_at = CURRENT_TIMESTAMP")
@@ -4434,10 +4762,11 @@ class DBManager:
                     # 插入新订单
                     cursor.execute('''
                     INSERT INTO orders (order_id, item_id, buyer_id, spec_name, spec_value,
-                                      quantity, amount, order_status, cookie_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                      quantity, amount, order_status, cookie_id, delivery_status, buyer_name)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ''', (order_id, item_id, buyer_id, spec_name, spec_value,
-                          quantity, amount, order_status or 'unknown', cookie_id))
+                          quantity, amount, order_status or 'unknown', cookie_id,
+                          delivery_status or 'pending', buyer_name or ''))
                     logger.info(f"插入新订单: {order_id}")
 
                 self.conn.commit()
@@ -4455,7 +4784,8 @@ class DBManager:
                 cursor = self.conn.cursor()
                 cursor.execute('''
                 SELECT order_id, item_id, buyer_id, spec_name, spec_value,
-                       quantity, amount, order_status, cookie_id, created_at, updated_at
+                       quantity, amount, order_status, cookie_id, created_at, updated_at,
+                       delivery_status, buyer_name
                 FROM orders WHERE order_id = ?
                 ''', (order_id,))
 
@@ -4472,13 +4802,32 @@ class DBManager:
                         'order_status': row[7],
                         'cookie_id': row[8],
                         'created_at': row[9],
-                        'updated_at': row[10]
+                        'updated_at': row[10],
+                        'delivery_status': row[11] if len(row) > 11 else 'pending',
+                        'buyer_name': row[12] if len(row) > 12 else ''
                     }
                 return None
 
             except Exception as e:
                 logger.error(f"获取订单信息失败: {order_id} - {e}")
                 return None
+
+    def update_order_delivery_status(self, order_id: str, delivery_status: str) -> bool:
+        """更新订单的发货状态"""
+        with self.lock:
+            try:
+                cursor = self.conn.cursor()
+                cursor.execute('''
+                UPDATE orders SET delivery_status = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE order_id = ?
+                ''', (delivery_status, order_id))
+                self.conn.commit()
+                logger.info(f"更新订单发货状态: {order_id} -> {delivery_status}")
+                return True
+            except Exception as e:
+                logger.error(f"更新订单发货状态失败: {order_id} - {e}")
+                self.conn.rollback()
+                return False
 
     def get_orders_by_cookie(self, cookie_id: str, limit: int = 100):
         """根据Cookie ID获取订单列表"""

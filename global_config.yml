@@ -71,3 +71,18 @@ WEBSOCKET_HEADERS:
   User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
     like Gecko) Chrome/133.0.0.0 Safari/537.36
 WEBSOCKET_URL: wss://wss-goofish.dingtalk.com/
+
+# 阿奇索转卖配置
+AGISO_CONFIG:
+  enabled: true  # 是否启用了阿奇索转卖功能
+  base_url: https://aldsidle.agiso.com  # 阿奇索平台地址
+  api_endpoints:
+    verify: /api/GetUserInfo  # 验证账户接口
+    upload: /api/upload  # 图片上传接口
+    publish: /api/item/publish  # 商品发布接口
+    item_list: /api/item/list  # 商品列表接口
+    category_list: /api/category/list  # 分类列表接口
+  timeout: 60  # 请求超时时间（秒）
+  max_concurrent: 3  # 最大并发请求数
+  retry_times: 2  # 重试次数
+  retry_delay: 1  # 重试间隔（秒）

@@ -108,6 +108,8 @@ function showSection(sectionName) {
     case 'message-notifications':  // 【消息通知菜单】
         loadMessageNotifications();
         break;
+    case 'password-settings':  // 【密码设置菜单】
+        break;
     case 'system-settings':    // 【系统设置菜单】
         loadSystemSettings();
         break;
@@ -288,7 +290,7 @@ async function loadDashboard() {
 async function loadOrdersCount() {
     try {
         const token = localStorage.getItem('auth_token');
-        const response = await fetch('/admin/data/orders', {
+        const response = await fetch('/admin/orders', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -1139,7 +1141,7 @@ async function loadCookies() {
     if (cookieDetails.length === 0) {
         tbody.innerHTML = `
         <tr>
-            <td colspan="11" class="text-center py-4 text-muted empty-state">
+            <td colspan="12" class="text-center py-4 text-muted empty-state">
             <i class="bi bi-inbox fs-1 d-block mb-3"></i>
             <h5>暂无账号</h5>
             <p class="mb-0">请添加新的闲鱼账号开始使用</p>
@@ -1252,7 +1254,31 @@ async function loadCookies() {
         // 自动确认发货状态（默认开启）
         const autoConfirm = cookie.auto_confirm === undefined ? true : cookie.auto_confirm;
 
+        // 构建用户信息显示
+        const nickname = cookie.nickname || '';
+        const avatarUrl = cookie.avatar_url || '';
+        const userInfoHtml = `
+            <div class="d-flex align-items-center">
+                ${avatarUrl ? 
+                    `<img src="${avatarUrl}" alt="头像" class="rounded-circle me-2" style="width: 32px; height: 32px; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px; display: none;">
+                         <i class="bi bi-person-fill"></i>
+                     </div>` :
+                    `<div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px;">
+                         <i class="bi bi-person-fill"></i>
+                     </div>`
+                }
+                <div class="d-flex flex-column">
+                    <span class="fw-bold" style="font-size: 0.9rem;">${nickname || '未知用户'}</span>
+                    <small class="text-muted" style="font-size: 0.75rem;">${cookie.id}</small>
+                </div>
+            </div>
+        `;
+
         tr.innerHTML = `
+        <td class="align-middle">
+            ${userInfoHtml}
+        </td>
         <td class="align-middle">
             <div class="cookie-id">
             <strong class="text-primary">${cookie.id}</strong>
@@ -1314,7 +1340,7 @@ async function loadCookies() {
             </div>
         </td>
         <td class="align-middle">
-            <small class="text-muted" style="font-size:0.8rem;white-space:nowrap">${cookie.created_at || '-'}</small>
+            <small class="text-muted" style="font-size:0.8rem;white-space:nowrap">${cookie.created_at ? formatDateTime(cookie.created_at) : '-'}</small>
         </td>
         <td class="align-middle">
             <div class="btn-group" role="group">
@@ -2236,6 +2262,20 @@ async function clearDefaultReplyRecords(accountId) {
     } catch (error) {
         console.error('清空默认回复记录失败:', error);
         showToast('清空默认回复记录失败', 'danger');
+    }
+}
+
+// ==================== API密钥显隐切换 ====================
+
+function toggleApiKeyVisibility() {
+    const input = document.getElementById('aiApiKey');
+    const icon = document.getElementById('aiApiKeyToggleIcon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
     }
 }
 
@@ -3527,7 +3567,7 @@ function renderCardsList(cards) {
         <td>${delayDisplay}</td>
         <td>${statusBadge}</td>
         <td>
-        <small class="text-muted">${new Date(card.created_at).toLocaleString('zh-CN')}</small>
+        <small class="text-muted">${formatDateTime(card.created_at)}</small>
         </td>
         <td>
         <div class="btn-group" role="group">
@@ -6096,8 +6136,9 @@ function updateBatchDeleteButton() {
 // 格式化日期时间
 function formatDateTime(dateString) {
     if (!dateString) return '未知';
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-CN');
+    const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+    const date = new Date(utcString);
+    return date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 }
 
 // HTML转义函数
@@ -6656,7 +6697,8 @@ function formatLogTimestamp(timestamp) {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    fractionalSecondDigits: 3
+    fractionalSecondDigits: 3,
+    timeZone: 'Asia/Shanghai'
     });
 }
 
@@ -8303,7 +8345,7 @@ function displayAIConversations(result) {
                 : '<span class="text-muted">-</span>';
             const content = row.content || '';
             const shortContent = content.length > 80 ? content.substring(0, 80) + '...' : content;
-            const time = row.created_at || '';
+            const time = row.created_at ? formatDateTime(row.created_at) : '';
 
             html += `<tr>
                 <td class="text-muted small">${row.id}</td>
@@ -8423,11 +8465,11 @@ async function updateRegistrationSettings() {
 // 加载订单列表
 async function loadOrders() {
     try {
-        // 先加载Cookie列表用于筛选
+        // 先加载Cookie列表用于筛选（同时缓存订单数据）
         await loadOrderCookieFilter();
 
-        // 加载订单列表
-        await refreshOrdersData();
+        // 应用筛选并显示
+        filterOrders();
     } catch (error) {
         console.error('加载订单列表失败:', error);
         showToast('加载订单列表失败', 'danger');
@@ -8439,10 +8481,18 @@ async function refreshOrdersData() {
     try {
         const selectedCookie = document.getElementById('orderCookieFilter').value;
         if (selectedCookie) {
-            await loadOrdersByCookie();
-        } else {
-            await loadAllOrders();
+            // 按cookie筛选时需要重新请求
+            const response = await fetch(`${apiBase}/admin/orders`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                allOrdersData = (data.data || []).filter(order => order.cookie_id === selectedCookie);
+                allOrdersData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            }
         }
+        // 否则使用 loadOrderCookieFilter 已缓存的数据
+        filterOrders();
     } catch (error) {
         console.error('刷新订单数据失败:', error);
         showToast('刷新订单数据失败', 'danger');
@@ -8452,7 +8502,7 @@ async function refreshOrdersData() {
 // 加载Cookie筛选选项
 async function loadOrderCookieFilter() {
     try {
-        const response = await fetch(`${apiBase}/admin/data/orders`, {
+        const response = await fetch(`${apiBase}/admin/orders`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -8474,6 +8524,10 @@ async function loadOrderCookieFilter() {
                     select.appendChild(option);
                 });
             }
+
+            // 缓存数据供后续使用
+            allOrdersData = data.data;
+            allOrdersData.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         }
     } catch (error) {
         console.error('加载Cookie选项失败:', error);
@@ -8483,7 +8537,7 @@ async function loadOrderCookieFilter() {
 // 加载所有订单
 async function loadAllOrders() {
     try {
-        const response = await fetch(`${apiBase}/admin/data/orders`, {
+        const response = await fetch(`${apiBase}/admin/orders`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -8511,12 +8565,14 @@ async function loadAllOrders() {
 async function loadOrdersByCookie() {
     const selectedCookie = document.getElementById('orderCookieFilter').value;
     if (!selectedCookie) {
-        await loadAllOrders();
+        // 没有选中cookie，使用缓存的全量数据
+        await loadOrderCookieFilter();
+        filterOrders();
         return;
     }
 
     try {
-        const response = await fetch(`${apiBase}/admin/data/orders`, {
+        const response = await fetch(`${apiBase}/admin/orders`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
@@ -8547,13 +8603,15 @@ function filterOrders() {
     const statusFilter = document.getElementById('orderStatusFilter')?.value || '';
 
     filteredOrdersData = allOrdersData.filter(order => {
-        // 搜索关键词筛选（订单ID或商品ID）
+        // 搜索关键词筛选（订单ID、商品ID或商品名称）
         const matchesSearch = !searchKeyword ||
             (order.order_id && order.order_id.toLowerCase().includes(searchKeyword)) ||
-            (order.item_id && order.item_id.toLowerCase().includes(searchKeyword));
+            (order.item_id && order.item_id.toLowerCase().includes(searchKeyword)) ||
+            (order.item_title && order.item_title.toLowerCase().includes(searchKeyword));
 
-        // 状态筛选
-        const matchesStatus = !statusFilter || order.order_status === statusFilter;
+        // 发货状态筛选
+        const deliveryStatus = order.delivery_status || 'pending';
+        const matchesStatus = !statusFilter || deliveryStatus === statusFilter;
 
         return matchesSearch && matchesStatus;
     });
@@ -8579,7 +8637,7 @@ function displayOrders() {
     if (filteredOrdersData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center text-muted py-4">
+                <td colspan="11" class="text-center text-muted py-4">
                     <i class="bi bi-inbox display-6 d-block mb-2"></i>
                     ${currentOrderSearchKeyword ? '没有找到匹配的订单' : '暂无订单数据'}
                 </td>
@@ -8602,6 +8660,12 @@ function displayOrders() {
 function createOrderRow(order) {
     const statusClass = getOrderStatusClass(order.order_status);
     const statusText = getOrderStatusText(order.order_status);
+    const deliveryStatus = order.delivery_status || 'pending';
+    const deliveryStatusClass = getDeliveryStatusClass(deliveryStatus);
+    const deliveryStatusText = getDeliveryStatusText(deliveryStatus);
+
+    // 判断是否显示重新发货按钮
+    const showRetryBtn = deliveryStatus === 'failed' || deliveryStatus === 'pending';
 
     return `
         <tr>
@@ -8614,13 +8678,13 @@ function createOrderRow(order) {
                 </span>
             </td>
             <td>
-                <span class="text-truncate d-inline-block" style="max-width: 100px;" title="${order.item_id || ''}">
-                    ${order.item_id || '-'}
+                <span class="text-truncate d-inline-block" style="max-width: 120px;" title="${order.item_title || order.item_id || ''}">
+                    ${order.item_title || order.item_id || '-'}
                 </span>
             </td>
             <td>
-                <span class="text-truncate d-inline-block" style="max-width: 80px;" title="${order.buyer_id || ''}">
-                    ${order.buyer_id || '-'}
+                <span class="text-truncate d-inline-block" style="max-width: 80px;" title="${order.buyer_name || order.buyer_id || ''}">
+                    ${order.buyer_name || order.buyer_id || '-'}
                 </span>
             </td>
             <td>
@@ -8634,7 +8698,7 @@ function createOrderRow(order) {
                 <span class="text-success fw-bold">¥${order.amount || '0.00'}</span>
             </td>
             <td>
-                <span class="badge ${statusClass}">${statusText}</span>
+                <span class="badge ${deliveryStatusClass}">${deliveryStatusText}</span>
             </td>
             <td>
                 <span class="text-truncate d-inline-block" style="max-width: 80px;" title="${order.cookie_id || ''}">
@@ -8642,9 +8706,15 @@ function createOrderRow(order) {
                 </span>
             </td>
             <td>
+                <small class="text-muted" title="${order.created_at || ''}">${formatDateTime(order.created_at) || '-'}</small>
+            </td>
+            <td>
                 <div class="btn-group btn-group-sm" role="group">
                     <button class="btn btn-outline-primary btn-sm" onclick="showOrderDetail('${order.order_id}')" title="查看详情">
                         <i class="bi bi-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="retryOrderDelivery('${order.order_id}')" title="再发一次货">
+                        <i class="bi bi-arrow-repeat"></i>
                     </button>
                     <button class="btn btn-outline-danger btn-sm" onclick="deleteOrder('${order.order_id}')" title="删除">
                         <i class="bi bi-trash"></i>
@@ -8675,6 +8745,60 @@ function getOrderStatusText(status) {
         'unknown': '未知'
     };
     return statusMap[status] || '未知';
+}
+
+// 获取发货状态样式类
+function getDeliveryStatusClass(status) {
+    const statusMap = {
+        'pending': 'bg-secondary text-white',
+        'delivered': 'bg-success text-white',
+        'failed': 'bg-danger text-white',
+        'not_triggered': 'bg-warning text-dark'
+    };
+    return statusMap[status] || 'bg-secondary text-white';
+}
+
+// 获取发货状态文本
+function getDeliveryStatusText(status) {
+    const statusMap = {
+        'pending': '待发货',
+        'delivered': '已发货',
+        'failed': '发货失败',
+        'not_triggered': '未触发'
+    };
+    return statusMap[status] || '未知';
+}
+
+// 重新发货
+async function retryOrderDelivery(orderId) {
+    if (!confirm(`确定要对订单 ${orderId} 重新发货吗？`)) {
+        return;
+    }
+
+    const authToken = localStorage.getItem('auth_token');
+
+    try {
+        const response = await fetch(`${apiBase}/orders/${orderId}/retry-delivery`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            showToast('重新发货成功', 'success');
+            // 刷新订单列表
+            await refreshOrdersData();
+        } else {
+            showToast(result.detail || result.message || '重新发货失败', 'danger');
+        }
+    } catch (error) {
+        console.error('重新发货失败:', error);
+        showToast('重新发货失败: ' + error.message, 'danger');
+    }
 }
 
 // 更新订单分页
@@ -8834,10 +8958,11 @@ async function showOrderDetail(orderId) {
                                     <h6>基本信息</h6>
                                     <table class="table table-sm">
                                         <tr><td>订单ID</td><td>${order.order_id}</td></tr>
-                                        <tr><td>商品ID</td><td>${order.item_id || '未知'}</td></tr>
-                                        <tr><td>买家ID</td><td>${order.buyer_id || '未知'}</td></tr>
+                                        <tr><td>商品名称</td><td>${order.item_title || order.item_id || '未知'}</td></tr>
+                                        <tr><td>买家</td><td>${order.buyer_name ? order.buyer_name + ' (' + (order.buyer_id || '') + ')' : (order.buyer_id || '未知')}</td></tr>
                                         <tr><td>Cookie账号</td><td>${order.cookie_id || '未知'}</td></tr>
                                         <tr><td>订单状态</td><td><span class="badge ${getOrderStatusClass(order.order_status)}">${getOrderStatusText(order.order_status)}</span></td></tr>
+                                        <tr><td>发货状态</td><td><span class="badge ${getDeliveryStatusClass(order.delivery_status || 'pending')}">${getDeliveryStatusText(order.delivery_status || 'pending')}</span></td></tr>
                                     </table>
                                 </div>
                                 <div class="col-md-6">
@@ -8874,6 +8999,9 @@ async function showOrderDetail(orderId) {
                             </div>
                         </div>
                         <div class="modal-footer">
+                            <button type="button" class="btn btn-warning" onclick="retryOrderDelivery('${order.order_id}'); bootstrap.Modal.getInstance(document.getElementById('orderDetailModal')).hide();">
+                                <i class="bi bi-arrow-repeat me-1"></i>再发一次货
+                            </button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                         </div>
                     </div>
@@ -8896,7 +9024,7 @@ async function showOrderDetail(orderId) {
 
         // 异步加载商品详情
         if (order.item_id) {
-            loadItemDetailForOrder(order.item_id, order.cookie_id);
+            loadItemDetailForOrder(order.item_id, order.cookie_id, order);
         }
 
     } catch (error) {
@@ -8906,7 +9034,7 @@ async function showOrderDetail(orderId) {
 }
 
 // 为订单加载商品详情
-async function loadItemDetailForOrder(itemId, cookieId) {
+async function loadItemDetailForOrder(itemId, cookieId, orderInfo = null) {
     try {
         const token = localStorage.getItem('auth_token');
 
@@ -8949,12 +9077,31 @@ async function loadItemDetailForOrder(itemId, cookieId) {
                 </div>
             `;
         } else {
-            content.innerHTML = `
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    无法获取商品详情信息
-                </div>
-            `;
+            // 商品详情不存在时，显示订单自身的商品信息
+            let fallbackHtml = '<div class="card"><div class="card-body">';
+            fallbackHtml += '<h6 class="card-title">订单商品信息</h6>';
+            if (orderInfo) {
+                fallbackHtml += '<table class="table table-sm table-borderless mb-0">';
+                if (orderInfo.item_title) {
+                    fallbackHtml += `<tr><td class="text-muted" style="width:100px;">商品名称</td><td>${orderInfo.item_title}</td></tr>`;
+                }
+                fallbackHtml += `<tr><td class="text-muted" style="width:100px;">商品ID</td><td>${orderInfo.item_id || '-'}</td></tr>`;
+                if (orderInfo.spec_name || orderInfo.spec_value) {
+                    fallbackHtml += `<tr><td class="text-muted">规格</td><td>${orderInfo.spec_name || ''} ${orderInfo.spec_value || ''}</td></tr>`;
+                }
+                if (orderInfo.quantity) {
+                    fallbackHtml += `<tr><td class="text-muted">数量</td><td>${orderInfo.quantity}</td></tr>`;
+                }
+                if (orderInfo.amount) {
+                    fallbackHtml += `<tr><td class="text-muted">金额</td><td class="text-success fw-bold">¥${orderInfo.amount}</td></tr>`;
+                }
+                fallbackHtml += '</table>';
+                fallbackHtml += '<small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>商品详细信息未同步，请在"商品管理"中获取商品信息</small>';
+            } else {
+                fallbackHtml += '<div class="text-muted">暂无商品信息</div>';
+            }
+            fallbackHtml += '</div></div>';
+            content.innerHTML = fallbackHtml;
         }
     } catch (error) {
         console.error('加载商品详情失败:', error);
@@ -9078,8 +9225,10 @@ function formatDateTime(dateString) {
     if (!dateString) return '未知时间';
 
     try {
-        const date = new Date(dateString);
+        const utcString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
+        const date = new Date(utcString);
         return date.toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -9255,12 +9404,14 @@ function displayUsers(users) {
     const tbody = document.getElementById('usersTableBody');
     users.forEach(user => {
         const role = user.role || (user.username === 'admin' ? 'admin' : 'user');
+        const roleLabels = { 'admin': '管理员', 'user': '普通用户' };
+        const roleDisplay = roleLabels[role] || role;
         const isAdmin = role === 'admin';
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${user.username}</strong></td>
             <td>${user.email || '未设置'}</td>
-            <td><span class="badge ${isAdmin ? 'bg-danger' : 'bg-primary'}">${isAdmin ? '管理员' : '普通用户'}</span></td>
+            <td><span class="badge ${isAdmin ? 'bg-danger' : 'bg-primary'}">${roleDisplay}</span></td>
             <td>${user.cookie_count || 0}</td>
             <td>${user.card_count || 0}</td>
             <td><small class="text-muted">${formatDateTime(user.created_at)}</small></td>
@@ -9358,11 +9509,12 @@ function showAddUserModal() {
     // 填充角色下拉
     const roleSelect = document.getElementById('addUserRole');
     roleSelect.innerHTML = '';
+    const roleLabels = { 'admin': '管理员', 'user': '普通用户' };
     const allRoles = window.allRoles || ['user', 'admin'];
     allRoles.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r;
-        opt.textContent = r;
+        opt.textContent = roleLabels[r] || r;
         roleSelect.appendChild(opt);
     });
 
@@ -9429,11 +9581,12 @@ function showEditUserModal(userId, username, email, currentRole) {
     // 填充角色下拉
     const roleSelect = document.getElementById('editUserRole');
     roleSelect.innerHTML = '<option value="">不修改</option>';
+    const roleLabels = { 'admin': '管理员', 'user': '普通用户' };
     const allRoles = window.allRoles || ['user', 'admin'];
     allRoles.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r;
-        opt.textContent = r;
+        opt.textContent = roleLabels[r] || r;
         if (r === currentRole) opt.selected = true;
         roleSelect.appendChild(opt);
     });
@@ -9510,6 +9663,7 @@ const ALL_PERMISSION_NAMES = {
     'notification_channels': '通知渠道',
     'message_notifications': '消息通知',
     'item_search': '商品搜索',
+    'password_settings': '密码设置',
     'system_settings': '系统设置',
     'user_management': '用户管理',
     'system_logs': '系统日志',
@@ -9553,6 +9707,7 @@ function hasPagePermission(sectionName) {
         'notification-channels': 'notification_channels',
         'message-notifications': 'message_notifications',
         'item-search': 'item_search',
+        'password-settings': 'password_settings',
         'system-settings': 'system_settings',
         'user-management': 'user_management',
         'logs': 'system_logs',
@@ -9640,10 +9795,12 @@ function renderRoles(roles) {
                 .join('') || '<span class="text-muted small">无权限</span>';
         }
 
+        const roleLabels = { 'admin': '管理员', 'user': '普通用户' };
+        const displayName = roleLabels[name] || name;
         const isBuiltin = (name === 'admin' || name === 'user');
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${name}</strong> ${isBuiltin ? '<span class="badge bg-secondary">内置</span>' : ''}</td>
+            <td><strong>${displayName}</strong> ${isBuiltin ? '<span class="badge bg-secondary">内置</span>' : ''}</td>
             <td>${permList}</td>
             <td>
                 <button class="btn btn-outline-primary btn-sm me-1" onclick="showEditRoleModal('${name}')">
@@ -9695,7 +9852,8 @@ const ADMIN_PERMS = ['user_management', 'system_logs', 'data_management', 'syste
 
 function showEditRoleModal(name) {
     currentEditRoleName = name;
-    document.getElementById('editRoleTitle').textContent = `角色：${name}`;
+    const roleLabels = { 'admin': '管理员', 'user': '普通用户' };
+    document.getElementById('editRoleTitle').textContent = `角色：${roleLabels[name] || name}`;
 
     const perms = rolesData[name] || {};
     const isAdminRole = (name === 'admin');
@@ -10430,6 +10588,8 @@ async function handleItemSearch(event) {
 
             // 修复字段名：使用data.data而不是data.items
             searchResultsData = data.data || [];
+            originalSearchResultsData = []; // 重置排序原始数据
+            currentSortType = 'default'; // 重置排序类型
             console.log('设置searchResultsData:', searchResultsData);
             console.log('searchResultsData长度:', searchResultsData.length);
 
@@ -10476,6 +10636,77 @@ function hideSearchResults() {
     document.getElementById('searchResults').style.display = 'none';
     document.getElementById('searchResultStats').style.display = 'none';
     document.getElementById('noSearchResults').style.display = 'none';
+}
+
+// ========================= 排序功能 =========================
+let currentSortType = 'default';
+let originalSearchResultsData = [];
+
+// 排序搜索结果
+function sortResults(sortType) {
+    currentSortType = sortType;
+    
+    // 更新按钮状态
+    document.querySelectorAll('#searchResults .btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    const activeBtn = {
+        'default': 'sortDefault',
+        'want_desc': 'sortWantDesc',
+        'want_asc': 'sortWantAsc',
+        'price_asc': 'sortPriceAsc',
+        'price_desc': 'sortPriceDesc'
+    }[sortType];
+    
+    if (activeBtn) {
+        document.getElementById(activeBtn).classList.add('active');
+    }
+    
+    // 保存原始数据（第一次排序时）
+    if (originalSearchResultsData.length === 0) {
+        originalSearchResultsData = [...searchResultsData];
+    }
+    
+    // 获取要排序的数据
+    let dataToSort = [...originalSearchResultsData];
+    
+    // 解析价格为数字
+    function parsePrice(priceStr) {
+        if (!priceStr) return 0;
+        const num = parseFloat(priceStr.replace(/[¥￥,，]/g, ''));
+        return isNaN(num) ? 0 : num;
+    }
+    
+    // 解析想要人数
+    function parseWantCount(item) {
+        return item.want_count || 0;
+    }
+    
+    // 执行排序
+    switch (sortType) {
+        case 'want_desc':
+            dataToSort.sort((a, b) => parseWantCount(b) - parseWantCount(a));
+            break;
+        case 'want_asc':
+            dataToSort.sort((a, b) => parseWantCount(a) - parseWantCount(b));
+            break;
+        case 'price_asc':
+            dataToSort.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+            break;
+        case 'price_desc':
+            dataToSort.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+            break;
+        default:
+            // 默认排序：按想要人数降序
+            dataToSort.sort((a, b) => parseWantCount(b) - parseWantCount(a));
+            break;
+    }
+    
+    // 更新数据并重新显示
+    searchResultsData = dataToSort;
+    currentSearchPage = 1;
+    displaySearchResults();
 }
 
 // 显示搜索结果
@@ -10543,9 +10774,14 @@ function createItemCard(item) {
                     <span class="badge bg-danger">${wantCount}人想要</span>
                 </div>` : ''}
                 <div class="mt-auto">
-                    <a href="${escapeHtml(item.item_url || item.url)}" target="_blank" class="btn btn-primary btn-sm w-100">
-                        <i class="bi bi-eye me-1"></i>查看详情
-                    </a>
+                    <div class="btn-group w-100" role="group">
+                        <a href="${escapeHtml(item.item_url || item.url)}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye me-1"></i>查看
+                        </a>
+                        <button class="btn btn-outline-success btn-sm" onclick='openResellModal(${JSON.stringify(item).replace(/'/g, "&#39;").replace(/"/g, "&quot;")})'>
+                            <i class="bi bi-shop me-1"></i>转卖
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

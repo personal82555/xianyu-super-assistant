@@ -23,6 +23,7 @@ from ai_reply_engine import ai_reply_engine
 from utils.qr_login import qr_login_manager
 from utils.xianyu_utils import trans_cookies
 from utils.image_utils import image_manager
+from utils.user_profile import get_user_profile_from_cookies
 from loguru import logger
 
 # 关键字文件路径
@@ -88,6 +89,7 @@ class LoginResponse(BaseModel):
     user_id: Optional[int] = None
     username: Optional[str] = None
     is_admin: Optional[bool] = None
+    captcha_required: bool = False
 
 
 class ChangePasswordRequest(BaseModel):
@@ -233,6 +235,7 @@ ALL_PERMISSIONS = {
     'notification_channels': '通知渠道',
     'message_notifications': '消息通知',
     'item_search': '商品搜索',
+    'password_settings': '密码设置',
     'system_settings': '系统设置',
     'user_management': '用户管理',
     'system_logs': '系统日志',
@@ -601,7 +604,8 @@ async def login(request: LoginRequest):
         logger.warning(f"【{request.username}】登录失败：用户名或密码错误")
         return LoginResponse(
             success=False,
-            message="用户名或密码错误"
+            message="用户名或密码错误",
+            captcha_required=True
         )
 
     elif request.email and request.password:
@@ -633,7 +637,8 @@ async def login(request: LoginRequest):
         logger.warning(f"【{request.email}】邮箱登录失败：邮箱或密码错误")
         return LoginResponse(
             success=False,
-            message="邮箱或密码错误"
+            message="邮箱或密码错误",
+            captcha_required=True
         )
 
     elif request.email and request.verification_code:
@@ -1052,6 +1057,9 @@ def get_cookies_details(current_user: Dict[str, Any] = Depends(get_current_user)
         remark = cookie_details.get('remark', '') if cookie_details else ''
 
         created_at = cookie_details.get('created_at') if cookie_details else None
+        nickname = cookie_details.get('nickname', '') if cookie_details else ''
+        avatar_url = cookie_details.get('avatar_url', '') if cookie_details else ''
+        
         result.append({
             'id': cookie_id,
             'value': cookie_value,
@@ -1059,7 +1067,9 @@ def get_cookies_details(current_user: Dict[str, Any] = Depends(get_current_user)
             'auto_confirm': auto_confirm,
             'remark': remark,
             'pause_duration': cookie_details.get('pause_duration', 10) if cookie_details else 10,
-            'created_at': created_at
+            'created_at': created_at,
+            'nickname': nickname,
+            'avatar_url': avatar_url
         })
     return result
 
@@ -1178,6 +1188,20 @@ async def process_qr_login_cookies(cookies: str, unb: str, current_user: Dict[st
     try:
         user_id = current_user['user_id']
 
+        # 获取用户资料（昵称和头像）
+        nickname = ''
+        avatar_url = ''
+        try:
+            user_profile = await get_user_profile_from_cookies(cookies)
+            if user_profile:
+                nickname = user_profile.get('nickname', '')
+                avatar_url = user_profile.get('avatar_url', '')
+                log_with_user('info', f"获取用户资料成功: nickname={nickname}, avatar_url={avatar_url[:50]}..." if avatar_url else f"获取用户资料成功: nickname={nickname}", current_user)
+            else:
+                log_with_user('warning', "获取用户资料失败，将使用默认值", current_user)
+        except Exception as e:
+            log_with_user('warning', f"获取用户资料异常: {e}", current_user)
+
         # 检查是否已存在相同unb的账号
         existing_cookies = db_manager.get_all_cookies(user_id)
         existing_account_id = None
@@ -1195,16 +1219,22 @@ async def process_qr_login_cookies(cookies: str, unb: str, current_user: Dict[st
         if existing_account_id:
             # 更新现有账号的Cookie
             db_manager.save_cookie(existing_account_id, cookies, user_id)
+            
+            # 更新用户资料
+            if nickname or avatar_url:
+                db_manager.update_cookie_user_info(existing_account_id, nickname, avatar_url)
 
             # 更新cookie_manager中的Cookie
             if cookie_manager.manager:
                 cookie_manager.manager.update_cookie(existing_account_id, cookies)
 
-            log_with_user('info', f"扫码登录更新现有账号Cookie: {existing_account_id}, UNB: {unb}", current_user)
+            log_with_user('info', f"扫码登录更新现有账号Cookie: {existing_account_id}, UNB: {unb}, nickname: {nickname}", current_user)
 
             return {
                 'account_id': existing_account_id,
-                'is_new_account': False
+                'is_new_account': False,
+                'nickname': nickname,
+                'avatar_url': avatar_url
             }
         else:
             # 创建新账号，使用unb作为账号ID
@@ -1219,16 +1249,22 @@ async def process_qr_login_cookies(cookies: str, unb: str, current_user: Dict[st
 
             # 保存新账号
             db_manager.save_cookie(account_id, cookies, user_id)
+            
+            # 保存用户资料
+            if nickname or avatar_url:
+                db_manager.update_cookie_user_info(account_id, nickname, avatar_url)
 
             # 添加到cookie_manager
             if cookie_manager.manager:
                 cookie_manager.manager.add_cookie(account_id, cookies)
 
-            log_with_user('info', f"扫码登录创建新账号: {account_id}, UNB: {unb}", current_user)
+            log_with_user('info', f"扫码登录创建新账号: {account_id}, UNB: {unb}, nickname: {nickname}", current_user)
 
             return {
                 'account_id': account_id,
-                'is_new_account': True
+                'is_new_account': True,
+                'nickname': nickname,
+                'avatar_url': avatar_url
             }
 
     except Exception as e:
@@ -2052,10 +2088,10 @@ def get_items_list(cid: str, current_user: Dict[str, Any] = Depends(get_current_
         with db_manager.lock:
             cursor = db_manager.conn.cursor()
             cursor.execute('''
-            SELECT item_id, item_title, item_price, created_at
+            SELECT item_id, item_title, item_price, updated_at
             FROM item_info
             WHERE cookie_id = ?
-            ORDER BY created_at DESC
+            ORDER BY updated_at DESC
             ''', (cid,))
 
             items = []
@@ -2064,7 +2100,7 @@ def get_items_list(cid: str, current_user: Dict[str, Any] = Depends(get_current_
                     'item_id': row[0],
                     'item_title': row[1] or '未知商品',
                     'item_price': row[2] or '价格未知',
-                    'created_at': row[3]
+                    'updated_at': row[3]
                 })
 
             return {"items": items, "count": len(items)}
@@ -2824,6 +2860,9 @@ def get_all_items(current_user: Dict[str, Any] = Depends(get_current_user)):
             items = db_manager.get_items_by_cookie(cookie_id)
             all_items.extend(items)
 
+        # 按更新时间倒序排列
+        all_items.sort(key=lambda x: x.get("updated_at") or "", reverse=True)
+
         return {"items": all_items}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取商品信息失败: {str(e)}")
@@ -3237,6 +3276,17 @@ def get_ai_reply_settings(cookie_id: str, current_user: Dict[str, Any] = Depends
             raise HTTPException(status_code=403, detail="无权限访问该Cookie")
 
         settings = db_manager.get_ai_reply_settings(cookie_id)
+
+        # 掩码处理 API 密钥：仅显示首4位+****+末4位
+        api_key = settings.get('api_key', '')
+        if api_key and len(api_key) > 8:
+            masked_key = api_key[:4] + '****' + api_key[-4:]
+        elif api_key:
+            masked_key = api_key[:2] + '****' if len(api_key) > 4 else '****'
+        else:
+            masked_key = ''
+        settings['api_key'] = masked_key
+
         return settings
     except HTTPException:
         raise
@@ -3263,6 +3313,14 @@ def update_ai_reply_settings(cookie_id: str, settings: AIReplySettings, current_
 
         # 保存设置
         settings_dict = settings.dict()
+
+        # 如果 API 密钥包含 ****，说明用户没改密钥，保持原值
+        if settings_dict.get('api_key') and '****' in settings_dict['api_key']:
+            # 从数据库获取当前密钥
+            current_settings = db_manager.get_ai_reply_settings(cookie_id)
+            if current_settings and current_settings.get('api_key'):
+                settings_dict['api_key'] = current_settings['api_key']
+
         success = db_manager.save_ai_reply_settings(cookie_id, settings_dict)
 
         if success:
@@ -3317,6 +3375,11 @@ def test_ai_reply(cookie_id: str, test_data: dict = Body(...), _: None = Depends
         # 检查是否启用AI回复
         if not ai_reply_engine.is_ai_enabled(cookie_id):
             raise HTTPException(status_code=400, detail='该账号未启用AI回复')
+
+        # 检查 API Key 是否已配置
+        settings = db_manager.get_ai_reply_settings(cookie_id)
+        if not settings.get('api_key'):
+            raise HTTPException(status_code=400, detail='请先配置 AI 回复的 API Key')
 
         # 构造测试数据
         test_message = test_data.get('message', '你好')
@@ -4263,6 +4326,57 @@ def list_backup_files(admin_user: Dict[str, Any] = Depends(require_permission('d
 
 # ------------------------- 数据管理接口 -------------------------
 
+@app.get('/admin/orders')
+def get_orders_with_item_title(admin_user: Dict[str, Any] = Depends(require_permission('data_management'))):
+    """获取订单列表（含商品标题）"""
+    from db_manager import db_manager
+    try:
+        log_with_user('info', "查询订单列表（含商品标题）", admin_user)
+
+        with db_manager.lock:
+            cursor = db_manager.conn.cursor()
+            cursor.execute('''
+                SELECT o.order_id, o.item_id, o.buyer_id, o.spec_name, o.spec_value,
+                       o.quantity, o.amount, o.order_status, o.cookie_id,
+                       o.created_at, o.updated_at, i.item_title,
+                       o.delivery_status, o.buyer_name
+                FROM orders o
+                LEFT JOIN item_info i ON o.cookie_id = i.cookie_id AND o.item_id = i.item_id
+                ORDER BY o.created_at DESC
+            ''')
+
+            data = []
+            for row in cursor.fetchall():
+                data.append({
+                    'order_id': row[0],
+                    'item_id': row[1],
+                    'buyer_id': row[2],
+                    'spec_name': row[3],
+                    'spec_value': row[4],
+                    'quantity': row[5],
+                    'amount': row[6],
+                    'order_status': row[7],
+                    'cookie_id': row[8],
+                    'created_at': row[9],
+                    'updated_at': row[10],
+                    'item_title': row[11],
+                    'delivery_status': row[12] if row[12] else 'pending',
+                    'buyer_name': row[13] if row[13] else ''
+                })
+
+        log_with_user('info', f"订单列表查询成功，共 {len(data)} 条记录", admin_user)
+
+        return {
+            "success": True,
+            "data": data,
+            "count": len(data)
+        }
+
+    except Exception as e:
+        log_with_user('error', f"查询订单列表失败: {str(e)}", admin_user)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get('/admin/data/{table_name}')
 def get_table_data(table_name: str, admin_user: Dict[str, Any] = Depends(require_permission('data_management'))):
     """获取指定表的所有数据"""
@@ -4381,6 +4495,155 @@ def clear_table_data(table_name: str, admin_user: Dict[str, Any] = Depends(requi
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# 订单重新发货API
+@app.post("/orders/{order_id}/retry-delivery")
+async def retry_order_delivery(order_id: str, admin_user: Dict[str, Any] = Depends(require_permission('data_management'))):
+    """重新发货 - 对失败的订单重新执行自动发货"""
+    try:
+        from db_manager import db_manager
+
+        log_with_user('info', f"尝试重新发货: 订单 {order_id}", admin_user)
+
+        # 获取订单信息
+        order = db_manager.get_order_by_id(order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="订单不存在")
+
+        cookie_id = order.get('cookie_id')
+        item_id = order.get('item_id')
+        buyer_id = order.get('buyer_id')
+
+        if not cookie_id or not item_id:
+            raise HTTPException(status_code=400, detail="订单缺少必要的商品或账号信息")
+
+        # 查找对应的 XianyuLive 实例
+        if cookie_manager.manager is None:
+            raise HTTPException(status_code=400, detail="Cookie管理器未初始化")
+
+        # 找到商品真正的卖家账号
+        seller_cookie_id = cookie_id
+        try:
+            cursor = db_manager.conn.cursor()
+            cursor.execute('SELECT cookie_id FROM item_info WHERE item_id = ?', (item_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                seller_cookie_id = row[0]
+                log_with_user('info', f"重新发货: 找到商品卖家账号 {seller_cookie_id}", admin_user)
+        except Exception:
+            pass
+
+        xianyu_instance = cookie_manager.manager.get_xianyu(seller_cookie_id)
+        if not xianyu_instance:
+            # 尝试原始cookie_id
+            xianyu_instance = cookie_manager.manager.get_xianyu(cookie_id)
+            if not xianyu_instance:
+                raise HTTPException(status_code=400, detail=f"账号 {seller_cookie_id} 未在线，无法重新发货")
+
+        # 重置订单状态为处理中
+        db_manager.update_order_delivery_status(order_id, 'pending')
+
+        # 先尝试获取商品标题（用于匹配发货规则）
+        item_title = None
+        try:
+            # 1. 从所有账号的商品信息中查找
+            cursor = db_manager.conn.cursor()
+            cursor.execute('SELECT item_title FROM item_info WHERE item_id = ?', (item_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                item_title = row[0]
+        except Exception:
+            pass
+
+        if not item_title:
+            try:
+                # 2. 通过API获取（用当前账号）
+                api_result = await xianyu_instance.get_item_info(item_id)
+                if api_result and 'data' in api_result:
+                    data = api_result['data']
+                    item_data = data.get('itemDO', {})
+                    share_data = item_data.get('shareData', {})
+                    share_info_str = share_data.get('shareInfoJsonString', '')
+                    if share_info_str:
+                        import json
+                        share_info = json.loads(share_info_str)
+                        item_title = share_info.get('contentParams', {}).get('mainParams', {}).get('content', '')
+                    if not item_title:
+                        item_title = item_data.get('title', '')
+            except Exception:
+                pass
+
+        # 3. 尝试从发货规则反向查找（用订单的item_id匹配）
+        if not item_title:
+            try:
+                cursor = db_manager.conn.cursor()
+                cursor.execute('SELECT keyword FROM delivery_rules WHERE enabled = 1')
+                rules = cursor.fetchall()
+                # 返回所有规则关键字供前端选择
+                rule_keywords = [r[0] for r in rules]
+                log_with_user('warning', f"无法获取商品标题，但找到发货规则: {rule_keywords}", admin_user)
+            except Exception:
+                pass
+
+        if not item_title:
+            item_title = "未知商品"
+
+        log_with_user('info', f"重新发货: 订单 {order_id}, 商品ID={item_id}, 商品标题={item_title[:50]}", admin_user)
+
+        # 调用自动发货方法
+        delivery_content = await xianyu_instance._auto_delivery(item_id, item_title, order_id, buyer_id)
+
+        if delivery_content:
+            # 发货成功，更新状态
+            db_manager.update_order_delivery_status(order_id, 'delivered')
+
+            # 发送发货消息（用卖家的聊天ID格式）
+            chat_id = f"{item_id}_{buyer_id}"
+            ws = xianyu_instance.ws
+            if not ws:
+                log_with_user('warning', f"重新发货: WebSocket未连接，无法发送消息 {order_id}", admin_user)
+                return {"success": True, "message": "发货内容获取成功，但WebSocket未连接，消息未发送"}
+
+            # 获取商品的session_id用于构造正确的chat_id
+            try:
+                cursor = db_manager.conn.cursor()
+                cursor.execute("SELECT value FROM cookies WHERE id = ?", (seller_cookie_id,))
+                cookie_row = cursor.fetchone()
+                if cookie_row:
+                    from cookie_manager import manager as cm
+                    if cm and seller_cookie_id in cm.keywords:
+                        pass
+            except Exception:
+                pass
+
+            if delivery_content.startswith("__IMAGE_SEND__"):
+                image_data = delivery_content.replace("__IMAGE_SEND__", "")
+                if "|" in image_data:
+                    card_id_str, image_url = image_data.split("|", 1)
+                    try:
+                        card_id = int(card_id_str)
+                    except ValueError:
+                        card_id = None
+                    await xianyu_instance.send_image_msg(ws, chat_id, buyer_id, image_url, card_id=card_id)
+                else:
+                    await xianyu_instance.send_image_msg(ws, chat_id, buyer_id, image_data)
+            else:
+                await xianyu_instance.send_msg(ws, chat_id, buyer_id, delivery_content)
+
+            log_with_user('info', f"重新发货成功: 订单 {order_id}", admin_user)
+            return {"success": True, "message": "重新发货成功"}
+        else:
+            # 发货失败
+            db_manager.update_order_delivery_status(order_id, 'failed')
+            log_with_user('warning', f"重新发货失败: 订单 {order_id}", admin_user)
+            raise HTTPException(status_code=400, detail="重新发货失败，未找到匹配的发货规则或获取发货内容失败")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_with_user('error', f"重新发货异常: {order_id} - {str(e)}", admin_user)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # 商品多规格管理API
 @app.put("/items/{cookie_id}/{item_id}/multi-spec")
 def update_item_multi_spec(cookie_id: str, item_id: str, spec_data: dict, _: None = Depends(require_auth)):
@@ -4424,3 +4687,299 @@ def update_item_multi_quantity_delivery(cookie_id: str, item_id: str, delivery_d
 # 移除自动启动，由Start.py或手动启动
 # if __name__ == "__main__":
 #     uvicorn.run(app, host="0.0.0.0", port=8080)
+
+
+# ========================= 阿奇索账户管理API =========================
+
+class AgisoAccountRequest(BaseModel):
+    name: str
+    cookie: str
+    authorization: str
+
+class AgisoAccountUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    cookie: Optional[str] = None
+    authorization: Optional[str] = None
+
+class ResellRequest(BaseModel):
+    agiso_account_id: int
+    source_item: Dict[str, Any]
+    resell_price: str
+    stock: int = 1
+    description: str = ""
+
+
+@app.get("/agiso/accounts")
+async def get_agiso_accounts(
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """获取当前用户的所有阿奇索账户"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        accounts = db_manager.get_agiso_accounts(current_user["user_id"])
+        # 隐藏敏感信息
+        for account in accounts:
+            if account.get("cookie"):
+                account["cookie"] = account["cookie"][:20] + "..." if len(account["cookie"]) > 20 else "***"
+            if account.get("authorization"):
+                account["authorization"] = account["authorization"][:20] + "..." if len(account["authorization"]) > 20 else "***"
+        return {"success": True, "data": accounts}
+    except Exception as e:
+        logger.error(f"获取阿奇索账户列表失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agiso/accounts")
+async def add_agiso_account(
+    request: AgisoAccountRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """添加阿奇索账户"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        
+        # 尝试验证账户有效性（可选，即使失败也允许添加）
+        verify_message = ""
+        try:
+            from utils.agiso_client import AgisoClient
+            async with AgisoClient(request.cookie, request.authorization) as client:
+                verify_result = await client.verify_account()
+                if not verify_result.get("success"):
+                    verify_message = f"（注意：{verify_result.get('message')}，但账户已添加，后续使用时可能需要重新配置）"
+        except Exception as e:
+            logger.warning(f"验证阿奇索账户时出错: {e}")
+            verify_message = "（账户已添加，验证功能暂时不可用）"
+        
+        # 添加账户
+        account_id = db_manager.add_agiso_account(
+            user_id=current_user["user_id"],
+            name=request.name,
+            cookie=request.cookie,
+            authorization=request.authorization
+        )
+        
+        if account_id == -1:
+            return {"success": False, "message": "添加账户失败"}
+        
+        message = f"添加成功{verify_message}" if verify_message else "添加成功"
+        return {"success": True, "message": message, "account_id": account_id}
+    except Exception as e:
+        logger.error(f"添加阿奇索账户失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.put("/agiso/accounts/{account_id}")
+async def update_agiso_account(
+    account_id: int,
+    request: AgisoAccountUpdateRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """更新阿奇索账户"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        
+        # 验证账户归属
+        account = db_manager.get_agiso_account_by_id(account_id)
+        if not account or account["user_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=404, detail="账户不存在")
+        
+        # 更新账户
+        success = db_manager.update_agiso_account(
+            account_id=account_id,
+            name=request.name,
+            cookie=request.cookie,
+            authorization=request.authorization
+        )
+        
+        if success:
+            return {"success": True, "message": "更新成功"}
+        else:
+            return {"success": False, "message": "更新失败"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新阿奇索账户失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.delete("/agiso/accounts/{account_id}")
+async def delete_agiso_account(
+    account_id: int,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """删除阿奇索账户"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        
+        # 验证账户归属
+        account = db_manager.get_agiso_account_by_id(account_id)
+        if not account or account["user_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=404, detail="账户不存在")
+        
+        # 删除账户
+        success = db_manager.delete_agiso_account(account_id)
+        
+        if success:
+            return {"success": True, "message": "删除成功"}
+        else:
+            return {"success": False, "message": "删除失败"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除阿奇索账户失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.post("/agiso/verify")
+async def verify_agiso_account(
+    account_id: int,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """验证阿奇索账户有效性"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        
+        # 获取账户信息
+        account = db_manager.get_agiso_account_by_id(account_id)
+        if not account or account["user_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=404, detail="账户不存在")
+        
+        # 验证账户
+        from utils.agiso_client import AgisoClient
+        async with AgisoClient(account["cookie"], account["authorization"]) as client:
+            result = await client.verify_account()
+            return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"验证阿奇索账户失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+# ========================= 转卖操作API =========================
+
+@app.post("/resell/publish")
+async def resell_publish(
+    request: ResellRequest,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """发布转卖商品"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        from utils.item_publisher import item_publisher
+        
+        # 验证阿奇索账户归属
+        account = db_manager.get_agiso_account_by_id(request.agiso_account_id)
+        if not account or account["user_id"] != current_user["user_id"]:
+            return {"success": False, "message": "阿奇索账户不存在"}
+        
+        # 执行转卖
+        result = await item_publisher.resell_item(
+            source_item=request.source_item,
+            agiso_account=account,
+            resell_price=request.resell_price,
+            stock=request.stock,
+            description=request.description,
+            user_id=current_user["user_id"]
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"转卖发布失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.get("/resell/records")
+async def get_resell_records(
+    limit: int = 50,
+    offset: int = 0,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """获取转卖记录"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        records = db_manager.get_resell_records(
+            user_id=current_user["user_id"],
+            limit=limit,
+            offset=offset
+        )
+        return {"success": True, "data": records}
+    except Exception as e:
+        logger.error(f"获取转卖记录失败: {e}")
+        return {"success": False, "data": []}
+
+
+@app.get("/resell/records/{record_id}")
+async def get_resell_record_detail(
+    record_id: int,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """获取单条转卖记录详情"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        record = db_manager.get_resell_record_by_id(record_id)
+        
+        if not record or record.get("user_id") != current_user["user_id"]:
+            raise HTTPException(status_code=404, detail="记录不存在")
+        
+        return {"success": True, "data": record}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取转卖记录详情失败: {e}")
+        return {"success": False, "message": str(e)}
+
+
+@app.delete("/resell/records/{record_id}")
+async def delete_resell_record(
+    record_id: int,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional)
+):
+    """删除转卖记录"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="未登录")
+    
+    try:
+        from db_manager import db_manager
+        
+        # 验证记录归属
+        record = db_manager.get_resell_record_by_id(record_id)
+        if not record or record.get("user_id") != current_user["user_id"]:
+            raise HTTPException(status_code=404, detail="记录不存在")
+        
+        # 删除记录
+        with db_manager.lock:
+            cursor = db_manager.conn.cursor()
+            db_manager._execute_sql(cursor, "DELETE FROM resell_records WHERE id = ?", (record_id,))
+            db_manager.conn.commit()
+        
+        return {"success": True, "message": "删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除转卖记录失败: {e}")
+        return {"success": False, "message": str(e)}

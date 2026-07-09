@@ -31,6 +31,12 @@
         </a>
       </div>
       <div class="nav-item">
+        <a href="#" class="nav-link" onclick="showSection('about')">
+          <i class="bi bi-book"></i>
+          系统使用手册
+        </a>
+      </div>
+      <div class="nav-item">
         <a href="#" class="nav-link" onclick="showSection('accounts')">
           <i class="bi bi-person-circle"></i>
           账号管理
@@ -93,13 +99,13 @@
       <div class="nav-item">
         <a href="#" class="nav-link" onclick="showSection('item-search')">
           <i class="bi bi-search"></i>
-          商品搜索
+          一键转卖
         </a>
       </div>
       <div class="nav-item">
-        <a href="#" class="nav-link" onclick="showSection('system-settings')">
-          <i class="bi bi-gear"></i>
-          系统设置
+        <a href="#" class="nav-link" onclick="showSection('password-settings')">
+          <i class="bi bi-shield-lock"></i>
+          密码设置
         </a>
       </div>
 
@@ -107,6 +113,12 @@
       <div id="adminMenuSection" style="display: none;">
         <div class="nav-divider mt-3 mb-2">
           <small class="text-white-50">管理员功能</small>
+        </div>
+        <div class="nav-item">
+          <a href="#" class="nav-link" onclick="showSection('system-settings')">
+            <i class="bi bi-gear"></i>
+            系统设置
+          </a>
         </div>
         <div class="nav-item">
           <a href="#" class="nav-link" onclick="showSection('user-management')">
@@ -132,13 +144,6 @@
             数据管理
           </a>
         </div>
-      </div>
-
-      <div class="nav-item">
-        <a href="#" class="nav-link" onclick="showSection('about')">
-          <i class="bi bi-book"></i>
-          系统使用手册
-        </a>
       </div>
 
       <!-- 底部分隔符 -->
@@ -197,6 +202,388 @@
           </div>
         </div>
 
+      </div>
+    </div>
+
+    <!-- 系统使用手册页面 -->
+    <div id="about-section" class="content-section">
+      <div class="content-header">
+        <h2 class="mb-0">
+          <i class="bi bi-book me-2"></i>
+          系统使用手册
+        </h2>
+        <p class="text-muted mb-0">闲鱼自动回复管理系统 - 完整功能说明与使用指南</p>
+      </div>
+      <div class="content-body p-0">
+        <div class="manual-wrapper">
+          <!-- 手册侧边导航 -->
+          <div class="manual-sidebar" id="manualSidebar">
+            <div class="manual-sidebar-header">
+              <i class="bi bi-list-ul me-2"></i>功能导航
+            </div>
+            <nav class="manual-nav">
+              <a href="#manual-dashboard" class="manual-nav-link active">仪表盘</a>
+              <a href="#manual-accounts" class="manual-nav-link">账号管理</a>
+              <a href="#manual-items" class="manual-nav-link">商品管理</a>
+              <a href="#manual-orders" class="manual-nav-link">订单管理</a>
+              <a href="#manual-auto-reply" class="manual-nav-link">自动回复</a>
+              <a href="#manual-ai-conversation" class="manual-nav-link">AI对话历史</a>
+              <a href="#manual-items-reply" class="manual-nav-link">指定商品回复</a>
+              <a href="#manual-cards" class="manual-nav-link">卡券管理</a>
+              <a href="#manual-auto-delivery" class="manual-nav-link">自动发货</a>
+              <a href="#manual-notification-channels" class="manual-nav-link">通知渠道</a>
+              <a href="#manual-message-notifications" class="manual-nav-link">消息通知</a>
+              <a href="#manual-item-search" class="manual-nav-link">一键转卖</a>
+              <a href="#manual-system-settings" class="manual-nav-link">系统设置</a>
+              <a href="#manual-user-management" class="manual-nav-link">用户管理</a>
+              <a href="#manual-role-permissions" class="manual-nav-link">角色配置</a>
+              <a href="#manual-logs" class="manual-nav-link">系统日志</a>
+              <a href="#manual-data-management" class="manual-nav-link">数据管理</a>
+            </nav>
+          </div>
+          <!-- 手册正文内容 -->
+          <div class="manual-content" id="manualContent">
+
+            <div class="manual-section" id="manual-dashboard">
+              <h3 class="manual-section-title"><i class="bi bi-speedometer2 me-2"></i>仪表盘</h3>
+              <p class="manual-desc">仪表盘是系统的概览首页，展示系统运行的核心数据和状态。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>统计卡片：</strong>顶部展示账号总数、关键词总数、在线账号数、今日订单数等关键指标，帮助您快速了解系统概况。</li>
+                <li><strong>账号状态列表：</strong>下方以表格形式展示每个闲鱼账号的详细信息，包括账号名称、商品数量、在线状态、今日消息数、今日订单数等。</li>
+                <li><strong>快捷操作：</strong>每个账号行支持快速查看商品、查看订单、查看回复设置等操作。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>登录系统后默认进入仪表盘页面。</li>
+                <li>浏览顶部统计卡片了解整体运行状态。</li>
+                <li>查看账号列表，点击操作按钮进行快速导航。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-accounts">
+              <h3 class="manual-section-title"><i class="bi bi-people me-2"></i>账号管理</h3>
+              <p class="manual-desc">管理所有闲鱼Cookie账号，支持添加、删除、启用/禁用、扫码登录等操作。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>添加账号：</strong>支持通过Cookie字符串添加账号，也可通过扫码登录方式添加。</li>
+                <li><strong>扫码登录：</strong>点击"扫码登录"按钮，弹窗显示二维码，使用闲鱼App扫描完成登录，系统自动获取Cookie。</li>
+                <li><strong>账号列表：</strong>展示所有已添加的账号，支持按状态筛选。</li>
+                <li><strong>账号操作：</strong>每个账号可进行启用/禁用、开启/关闭自动确认、设置备注、调整暂停时长、删除等操作。</li>
+                <li><strong>批量导入：</strong>支持批量导入Cookie账号。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"账号管理"页面，点击"添加账号"或"扫码登录"。</li>
+                <li>添加成功后，在列表中查看账号信息。</li>
+                <li>使用右侧操作按钮管理账号状态和配置。</li>
+                <li>定期检查Cookie有效性，及时续期失效的账号。</li>
+              </ol>
+              <div class="manual-tip">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>提示：</strong>Cookie过期后需要重新扫码登录，建议定期检查账号状态。
+              </div>
+            </div>
+
+            <div class="manual-section" id="manual-items">
+              <h3 class="manual-section-title"><i class="bi bi-box me-2"></i>商品管理</h3>
+              <p class="manual-desc">管理闲鱼账号发布的商品信息，支持浏览、搜索、筛选和批量操作。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>商品列表：</strong>展示所有商品，包含商品标题、图片、价格、所属账号、状态等信息。</li>
+                <li><strong>搜索筛选：</strong>按关键词、所属账号、商品状态等进行搜索和筛选。</li>
+                <li><strong>批量操作：</strong>支持批量删除、批量导出商品信息。</li>
+                <li><strong>多规格商品：</strong>支持展示和管理多规格商品。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"商品管理"页面，系统自动加载所有商品。</li>
+                <li>使用搜索框和筛选条件查找目标商品。</li>
+                <li>勾选商品进行批量操作或点击单个商品查看详情。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-orders">
+              <h3 class="manual-section-title"><i class="bi bi-receipt me-2"></i>订单管理</h3>
+              <p class="manual-desc">查看和管理闲鱼账号的所有订单，支持按账号筛选和搜索。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>订单列表：</strong>展示所有订单信息，包括订单号、商品名称、金额、买家信息、订单状态、下单时间等。</li>
+                <li><strong>筛选：</strong>按所属账号、订单状态等条件筛选订单。</li>
+                <li><strong>搜索：</strong>支持按订单号或商品关键词搜索。</li>
+                <li><strong>订单详情：</strong>点击查看订单完整信息。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"订单管理"页面，系统自动加载订单数据。</li>
+                <li>使用顶部的账号筛选和搜索框查找目标订单。</li>
+                <li>点击订单行查看详细内容。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-auto-reply">
+              <h3 class="manual-section-title"><i class="bi bi-chat-dots me-2"></i>自动回复</h3>
+              <p class="manual-desc">配置关键词自动回复规则，当买家发送的消息匹配关键词时自动回复预设内容。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>按账号配置：</strong>为每个闲鱼账号分别配置独立的关键词回复规则。</li>
+                <li><strong>关键词管理：</strong>支持添加、编辑、删除关键词，设置关键词的匹配模式（精确/模糊）。</li>
+                <li><strong>回复内容：</strong>支持文本回复和图片回复，可绑定到指定商品。</li>
+                <li><strong>默认回复：</strong>设置未匹配到关键词时的默认回复内容。</li>
+                <li><strong>AI智能回复：</strong>集成AI大模型，开启后可自动生成回复内容（需在系统设置中配置AI参数）。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"自动回复"页面，选择要配置的账号。</li>
+                <li>点击"添加关键词"，输入关键词和对应的回复内容。</li>
+                <li>可选：绑定到特定商品，设置匹配模式。</li>
+                <li>配置默认回复作为兜底回复内容。</li>
+                <li>开启自动回复开关，保存配置。</li>
+              </ol>
+              <div class="manual-tip">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>提示：</strong>建议为每个账号配置至少3-5个常用关键词，并设置合理的默认回复，以提升回复率。
+              </div>
+            </div>
+
+            <div class="manual-section" id="manual-ai-conversation">
+              <h3 class="manual-section-title"><i class="bi bi-robot me-2"></i>AI对话历史</h3>
+              <p class="manual-desc">查看AI智能回复的对话记录，了解AI与买家的完整交互过程。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>对话列表：</strong>展示所有AI参与的对话，包含买家信息、所属账号、对话时间等。</li>
+                <li><strong>对话详情：</strong>点击查看完整的对话内容，包括买家消息和AI回复。</li>
+                <li><strong>搜索：</strong>支持按关键词搜索对话内容。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"AI对话历史"页面查看所有AI对话记录。</li>
+                <li>点击任意对话查看详细的交互内容。</li>
+                <li>通过搜索框快速定位特定对话。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-items-reply">
+              <h3 class="manual-section-title"><i class="bi bi-tag me-2"></i>指定商品回复</h3>
+              <p class="manual-desc">为特定商品配置独立的回复规则，不同商品可以有不同的自动回复内容。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>商品绑定：</strong>选择指定商品并为其配置专属回复内容。</li>
+                <li><strong>独立规则：</strong>每个商品的回复规则独立于全局关键词规则。</li>
+                <li><strong>优先级：</strong>指定商品回复的优先级高于通用关键词回复。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"指定商品回复"页面。</li>
+                <li>选择需要配置的账号和商品。</li>
+                <li>设置该商品对应的回复内容。</li>
+                <li>保存配置，当买家咨询该商品时将自动回复设置的内容。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-cards">
+              <h3 class="manual-section-title"><i class="bi bi-credit-card me-2"></i>卡券管理</h3>
+              <p class="manual-desc">管理数字卡券（如兑换码、卡密等），支持批量导入和自动发货。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>卡券类型：</strong>支持普通卡密和API类型的卡券。</li>
+                <li><strong>多规格：</strong>支持为卡券设置不同规格（面值、类型等）。</li>
+                <li><strong>批量导入：</strong>支持批量导入卡券数据。</li>
+                <li><strong>库存管理：</strong>自动统计卡券库存数量。</li>
+                <li><strong>图片上传：</strong>支持上传卡券相关图片。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"卡券管理"页面，点击"新建卡券"。</li>
+                <li>填写卡券名称、类型、规格等信息。</li>
+                <li>批量导入卡券内容（兑换码/卡密）。</li>
+                <li>关联到自动发货规则，实现购买后自动发货。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-auto-delivery">
+              <h3 class="manual-section-title"><i class="bi bi-send me-2"></i>自动发货</h3>
+              <p class="manual-desc">配置自动发货规则，买家下单付款后自动发送卡券或虚拟商品。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>发货规则：</strong>创建规则并关联卡券，设置触发条件。</li>
+                <li><strong>商品关联：</strong>将发货规则绑定到指定商品。</li>
+                <li><strong>自动发送：</strong>买家付款后系统自动发送卡券内容到买家聊天窗口。</li>
+                <li><strong>库存检查：</strong>自动检查卡券库存，库存不足时停止自动发货。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"自动发货"页面，点击"新建规则"。</li>
+                <li>选择关联的商品和卡券。</li>
+                <li>配置触发条件和发货内容。</li>
+                <li>启用规则，保存配置。</li>
+              </ol>
+              <div class="manual-tip">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>提示：</strong>请确保卡券库存充足，以免自动发货失败。
+              </div>
+            </div>
+
+            <div class="manual-section" id="manual-notification-channels">
+              <h3 class="manual-section-title"><i class="bi bi-bell me-2"></i>通知渠道</h3>
+              <p class="manual-desc">配置消息通知渠道，支持通过多种方式接收系统通知。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>Webhook：</strong>配置Webhook地址，系统将通知发送到指定URL。</li>
+                <li><strong>Bark：</strong>支持Bark推送，在iOS设备上接收通知。</li>
+                <li><strong>其他渠道：</strong>支持更多自定义通知方式。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"通知渠道"页面，点击"添加渠道"。</li>
+                <li>选择渠道类型，填写配置信息。</li>
+                <li>保存并测试通知是否正常送达。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-message-notifications">
+              <h3 class="manual-section-title"><i class="bi bi-envelope me-2"></i>消息通知</h3>
+              <p class="manual-desc">为每个账号单独配置消息通知规则，当收到新消息时通过通知渠道发送提醒。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>按账号配置：</strong>为不同的闲鱼账号设置不同的通知策略。</li>
+                <li><strong>通知规则：</strong>选择触发通知的事件类型（新消息、新订单等）。</li>
+                <li><strong>通知渠道绑定：</strong>将通知规则关联到已配置的通知渠道。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"消息通知"页面，选择要配置的账号。</li>
+                <li>选择通知触发条件和目标通知渠道。</li>
+                <li>保存配置，当触发条件满足时将自动发送通知。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-item-search">
+                <h3 class="manual-section-title"><i class="bi bi-search me-2"></i>一键转卖</h3>
+              <p class="manual-desc">搜索闲鱼平台上的商品，查看商品信息和卖家情况。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>关键词搜索：</strong>输入关键词搜索闲鱼平台商品。</li>
+                <li><strong>搜索结果：</strong>展示商品标题、价格、卖家信息、商品链接等。</li>
+                <li><strong>筛选排序：</strong>支持按价格、销量等维度排序筛选。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"一键转卖"页面。</li>
+                <li>输入搜索关键词，点击搜索。</li>
+                <li>浏览搜索结果，点击查看商品详情。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-system-settings">
+              <h3 class="manual-section-title"><i class="bi bi-gear me-2"></i>系统设置</h3>
+              <p class="manual-desc">配置系统的全局参数，包括主题颜色、AI模型、代理设置、注册开关等。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>主题颜色：</strong>调整系统界面主题色。</li>
+                <li><strong>AI设置：</strong>配置AI回复的模型名称、API地址、Prompt提示词等参数。</li>
+                <li><strong>代理设置：</strong>配置网络代理，用于访问外部API。</li>
+                <li><strong>注册开关：</strong>控制是否允许新用户通过注册页面自行注册账号。关闭后仅管理员可在用户管理中添加用户。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"系统设置"页面。</li>
+                <li>按需调整各项配置参数。</li>
+                <li>点击"保存"使配置生效。</li>
+              </ol>
+              <div class="manual-tip">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>提示：</strong>修改AI设置后需要重新开启自动回复功能才能生效。
+              </div>
+            </div>
+
+            <div class="manual-section" id="manual-user-management">
+              <h3 class="manual-section-title"><i class="bi bi-people me-2"></i>用户管理</h3>
+              <p class="manual-desc">管理系统的用户账号，仅管理员可访问。支持添加、编辑、删除用户，以及分配角色。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>用户列表：</strong>以表格形式展示所有注册用户的信息（用户名、邮箱、角色、Cookie数、卡券数、注册时间）。</li>
+                <li><strong>添加用户：</strong>管理员可直接创建新用户，填写用户名、邮箱、密码，并选择角色。</li>
+                <li><strong>编辑用户：</strong>可修改用户的邮箱、重置密码，或变更角色（角色下拉来自"角色配置"中定义的角色）。</li>
+                <li><strong>删除用户：</strong>删除用户及其所有关联数据（Cookie、关键词、卡券等），不可恢复。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>使用管理员账号登录系统。</li>
+                <li>进入"用户管理"页面查看所有用户。</li>
+                <li>点击"添加用户"创建新账号，或点击编辑/删除按钮管理现有用户。</li>
+                <li>分配角色前请先在"角色配置"中定义好角色和对应的权限。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-role-permissions">
+              <h3 class="manual-section-title"><i class="bi bi-shield-lock me-2"></i>角色配置</h3>
+              <p class="manual-desc">管理角色和权限，控制不同用户可以访问的系统功能。仅管理员可访问。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>角色管理：</strong>支持创建自定义角色（如运营、客服等），内置 <code>admin</code>（全部权限）和 <code>user</code>（基础功能）角色不可删除。</li>
+                <li><strong>权限配置：</strong>每个角色可独立勾选 18 项系统功能的访问权限，包括仪表盘、账号管理、商品管理、订单管理、自动回复、AI对话历史、指定商品回复、卡券管理、自动发货、通知渠道、消息通知、一键转卖、系统设置、用户管理、系统日志、数据管理、备份导出、备份导入。</li>
+                <li><strong>全选/取消：</strong>编辑角色时支持一键全选或取消所有权限。</li>
+                <li><strong>用户关联：</strong>在"用户管理"中为用户分配角色后，该用户将根据角色获得对应的功能访问权限。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>点击左侧菜单"角色配置"进入页面。</li>
+                <li>点击"添加角色"输入角色名称创建新角色。</li>
+                <li>点击角色的"编辑"按钮，在弹出的窗口中勾选该角色应有的权限。</li>
+                <li>点击"保存"使配置生效。</li>
+                <li>进入"用户管理"页面，编辑用户时从角色下拉中选择刚创建的角色。</li>
+              </ol>
+              <div class="manual-tip">
+                <i class="bi bi-lightbulb me-1"></i>
+                <strong>提示：</strong><code>admin</code> 角色拥有全部权限且不可修改。<code>user</code> 角色默认拥有除管理员功能外的所有权限。
+              </div>
+            </div>
+
+            <div class="manual-section" id="manual-logs">
+              <h3 class="manual-section-title"><i class="bi bi-journal-text me-2"></i>系统日志</h3>
+              <p class="manual-desc">实时查看系统运行日志，支持日志级别筛选和自动刷新。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>实时日志：</strong>实时显示系统运行日志，支持自动滚动到最新。</li>
+                <li><strong>级别筛选：</strong>按INFO、WARN、ERROR等日志级别筛选显示。</li>
+                <li><strong>自动刷新：</strong>开启后日志自动更新，适合监控系统运行状态。</li>
+                <li><strong>日志搜索：</strong>支持关键词搜索日志内容。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"系统日志"页面。</li>
+                <li>选择日志级别筛选需要查看的日志。</li>
+                <li>开启"自动刷新"实时监控系统运行。</li>
+                <li>使用搜索框定位特定日志内容。</li>
+              </ol>
+            </div>
+
+            <div class="manual-section" id="manual-data-management">
+              <h3 class="manual-section-title"><i class="bi bi-database me-2"></i>数据管理</h3>
+              <p class="manual-desc">管理系统的SQLite数据库，支持查看表数据、导出备份、导入恢复。</p>
+              <h4>功能说明</h4>
+              <ul>
+                <li><strong>数据表浏览：</strong>选择数据库表，查看表中的所有数据记录。</li>
+                <li><strong>数据导出：</strong>将数据库导出为备份文件，支持下载。</li>
+                <li><strong>数据导入：</strong>导入之前备份的数据库文件，恢复数据。</li>
+                <li><strong>记录统计：</strong>显示每个表的记录总数。</li>
+              </ul>
+              <h4>使用步骤</h4>
+              <ol>
+                <li>进入"数据管理"页面。</li>
+                <li>从下拉列表中选择要查看的数据表。</li>
+                <li>浏览表数据或执行导出/导入操作。</li>
+                <li>定期备份数据库以防数据丢失。</li>
+              </ol>
+              <div class="manual-warn">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>注意：</strong>导入数据会覆盖当前数据库，请提前备份。
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
 
@@ -282,6 +669,7 @@
               <table class="table table-hover" id="cookieTable">
                 <thead>
                   <tr>
+                    <th style="width: 12%">用户信息</th>
                     <th style="width: 9%">账号ID</th>
                     <th style="width: 11%">Cookie值</th>
                     <th style="width: 7%">关键词</th>
@@ -584,7 +972,6 @@
     </div>
   </div>
 
-
     <!-- 订单管理内容 -->
     <div id="orders-section" class="content-section">
       <div class="content-header">
@@ -607,10 +994,9 @@
             <label class="form-label">订单状态</label>
             <select class="form-select" id="orderStatusFilter" onchange="filterOrders()">
               <option value="">所有状态</option>
-              <option value="processing">处理中</option>
-              <option value="processed">已处理</option>
-              <option value="completed">已完成</option>
-              <option value="unknown">未知</option>
+              <option value="pending">待发货</option>
+              <option value="delivered">已发货</option>
+              <option value="failed">发货失败</option>
             </select>
           </div>
           <div class="col-md-4">
@@ -631,7 +1017,7 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
               <input type="text" class="form-control" id="orderSearchInput"
-                     placeholder="搜索订单ID或商品ID..." style="width: 300px;">
+                     placeholder="搜索订单ID、商品ID或商品名称..." style="width: 300px;">
               <h5 class="mb-0">订单列表</h5>
             </div>
             <button class="btn btn-sm btn-outline-danger" onclick="batchDeleteOrders()" id="batchDeleteOrdersBtn" disabled>
@@ -652,19 +1038,20 @@
                       <input type="checkbox" id="selectAllOrders" onchange="toggleSelectAllOrders(this)">
                     </th>
                     <th style="width: 15%">订单ID</th>
-                    <th style="width: 12%">商品ID</th>
+                    <th style="width: 15%">商品名称</th>
                     <th style="width: 10%">买家ID</th>
                     <th style="width: 12%">规格信息</th>
                     <th style="width: 8%">数量</th>
                     <th style="width: 10%">金额</th>
-                    <th style="width: 8%">状态</th>
+                    <th style="width: 8%">发货状态</th>
                     <th style="width: 10%">账号ID</th>
-                    <th style="width: 10%">操作</th>
+                    <th style="width: 12%">下单时间</th>
+                    <th style="width: 8%">操作</th>
                   </tr>
                 </thead>
                 <tbody id="ordersTableBody">
                   <tr>
-                    <td colspan="10" class="text-center text-muted">加载中...</td>
+                    <td colspan="11" class="text-center text-muted">加载中...</td>
                   </tr>
                 </tbody>
               </table>
@@ -1406,12 +1793,24 @@
 
     <!-- 商品搜索内容 -->
     <div id="item-search-section" class="content-section">
-      <div class="content-header">
-        <h2 class="mb-0">
-          <i class="bi bi-search me-2"></i>
-          商品搜索
-        </h2>
-        <p class="text-muted mb-0">搜索闲鱼商品，获取真实商品数据</p>
+      <div class="content-header d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-0">
+            <i class="bi bi-search me-2"></i>
+            一键转卖
+          </h2>
+          <p class="text-muted mb-0">搜索闲鱼商品，一键转卖到阿奇索平台</p>
+        </div>
+        <div>
+          <button type="button" class="btn btn-outline-success btn-sm me-2" onclick="showAgisoAccountManager()">
+            <i class="bi bi-person-gear me-1"></i>
+            阿奇索账户
+          </button>
+          <button type="button" class="btn btn-outline-info btn-sm" onclick="showResellRecords()">
+            <i class="bi bi-clock-history me-1"></i>
+            转卖记录
+          </button>
+        </div>
       </div>
       <div class="content-body">
         <!-- 搜索表单 -->
@@ -1510,9 +1909,25 @@
               <i class="bi bi-grid me-2"></i>
               搜索结果
             </h5>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" onclick="exportSearchResults()">
-                <i class="bi bi-download"></i> 导出结果
+            <div class="d-flex gap-2 align-items-center">
+              <span class="text-muted small me-2">排序：</span>
+              <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary active" onclick="sortResults('default')" id="sortDefault">默认</button>
+                <button type="button" class="btn btn-outline-secondary" onclick="sortResults('want_desc')" id="sortWantDesc">
+                  <i class="bi bi-heart-fill me-1" style="color:#ff6b6b;"></i>想要多→少
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="sortResults('want_asc')" id="sortWantAsc">
+                  <i class="bi bi-heart me-1" style="color:#ff6b6b;"></i>想要少→多
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="sortResults('price_asc')" id="sortPriceAsc">
+                  <i class="bi bi-currency-yen me-1"></i>价格低→高
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="sortResults('price_desc')" id="sortPriceDesc">
+                  <i class="bi bi-currency-yen me-1"></i>价格高→低
+                </button>
+              </div>
+              <button class="btn btn-sm btn-outline-secondary ms-2" onclick="exportSearchResults()">
+                <i class="bi bi-download"></i> 导出
               </button>
             </div>
           </div>
@@ -1539,18 +1954,17 @@
       </div>
     </div>
 
-    <!-- 系统设置内容 -->
-    <div id="system-settings-section" class="content-section">
+        <!-- 密码设置内容 -->
+    <div id="password-settings-section" class="content-section">
       <div class="content-header">
         <h2 class="mb-0">
-          <i class="bi bi-gear me-2"></i>
-          系统设置
+          <i class="bi bi-shield-lock me-2"></i>
+          密码设置
         </h2>
-        <p class="text-muted mb-0">管理系统配置和用户设置</p>
+        <p class="text-muted mb-0">修改当前登录账号的登录密码</p>
       </div>
       <div class="content-body">
         <div class="row">
-          <!-- 密码设置 -->
           <div class="col-md-6">
             <div class="card">
               <div class="card-header">
@@ -1577,154 +1991,11 @@
               </div>
             </div>
           </div>
-
-          <!-- 主题设置 -->
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-header">
-                <i class="bi bi-palette me-2"></i>主题设置
-              </div>
-              <div class="card-body">
-                <form id="themeForm">
-                  <div class="mb-3">
-                    <label for="themeColor" class="form-label">主题颜色</label>
-                    <select class="form-select" id="themeColor">
-                      <option value="blue">蓝色</option>
-                      <option value="green">绿色</option>
-                      <option value="purple">紫色</option>
-                      <option value="red">红色</option>
-                      <option value="orange">橙色</option>
-                    </select>
-                  </div>
-                  <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle me-1"></i>应用主题
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 注册设置 (仅管理员可见) -->
-        <div id="registration-settings" class="row mt-4" style="display: none;">
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-header">
-                <i class="bi bi-person-plus me-2"></i>注册设置
-                <span class="badge bg-warning ms-2">管理员专用</span>
-              </div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="registrationEnabled">
-                    <label class="form-check-label" for="registrationEnabled">
-                      <strong>开启用户注册</strong>
-                    </label>
-                  </div>
-                  <div class="form-text">
-                    <i class="bi bi-info-circle me-1"></i>
-                    关闭后，新用户将无法注册账号，登录页面也不会显示注册链接
-                  </div>
-                </div>
-                <button type="button" class="btn btn-primary" onclick="updateRegistrationSettings()">
-                  <i class="bi bi-check-circle me-1"></i>保存设置
-                </button>
-                <div id="registrationStatus" class="mt-3" style="display: none;">
-                  <div class="alert alert-info mb-0">
-                    <i class="bi bi-info-circle me-2"></i>
-                    <span id="registrationStatusText"></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 外发配置 (仅管理员可见) -->
-        <div id="outgoing-configs" class="row mt-4" style="display: none;">
-          <!-- 外发配置内容将由JavaScript动态生成 -->
-        </div>
-
-        <!-- AI回复全局默认配置 (仅管理员可见) -->
-        <div id="ai-defaults-configs" class="row mt-4" style="display: none;">
-          <!-- AI回复全局默认配置内容将由JavaScript动态生成 -->
-        </div>
-
-        <!-- 备份管理 (仅管理员可见) -->
-        <div id="backup-management" class="row mt-4" style="display: none;">
-          <div class="col-12">
-            <div class="card">
-              <div class="card-header">
-                <i class="bi bi-archive me-2"></i>备份管理
-                <span class="badge bg-warning ms-2">管理员专用</span>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <!-- 数据库备份 -->
-                  <div class="col-md-6">
-                    <h6 class="mb-3">
-                      <i class="bi bi-database-down me-2"></i>数据库备份
-                    </h6>
-                    <p class="text-muted mb-3">直接下载完整的数据库文件，包含所有用户数据和设置</p>
-                    <button type="button" class="btn btn-success" onclick="downloadDatabaseBackup()">
-                      <i class="bi bi-download me-1"></i>下载数据库
-                    </button>
-                    <div class="mt-2">
-                      <small class="text-muted">
-                        <i class="bi bi-info-circle me-1"></i>
-                        推荐方式：完整备份，恢复简单
-                      </small>
-                    </div>
-                  </div>
-
-                  <!-- 数据库恢复 -->
-                  <div class="col-md-6">
-                    <h6 class="mb-3">
-                      <i class="bi bi-database-up me-2"></i>数据库恢复
-                    </h6>
-                    <p class="text-muted mb-3">上传数据库文件直接替换当前数据库，系统将自动重新加载</p>
-                    <div class="mb-3">
-                      <input type="file" class="form-control" id="databaseFile" accept=".db">
-                    </div>
-                    <button type="button" class="btn btn-danger" onclick="uploadDatabaseBackup()">
-                      <i class="bi bi-upload me-1"></i>恢复数据库
-                    </button>
-                    <div class="mt-2">
-                      <small class="text-danger">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        警告：将覆盖所有当前数据！
-                      </small>
-                    </div>
-                  </div>
-                </div>
-
-
-
-                <!-- 系统缓存管理 -->
-                <div class="row mt-4">
-                  <div class="col-12">
-                    <h6 class="mb-3">
-                      <i class="bi bi-arrow-clockwise me-2"></i>系统缓存管理
-                    </h6>
-                    <p class="text-muted mb-3">如果导入备份后关键字等数据没有立即更新，可以手动刷新系统缓存</p>
-                    <button type="button" class="btn btn-info" onclick="reloadSystemCache()">
-                      <i class="bi bi-arrow-clockwise me-1"></i>刷新系统缓存
-                    </button>
-                  </div>
-                </div>
-
-                <div class="alert alert-warning mt-4" role="alert">
-                  <i class="bi bi-exclamation-triangle me-2"></i>
-                  <strong>注意：</strong>导入备份将会覆盖当前系统的所有数据，请谨慎操作！建议在导入前先导出当前数据作为备份。
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- 用户管理内容 -->
+<!-- 用户管理内容 -->
     <div id="user-management-section" class="content-section">
       <div class="content-header">
         <h2 class="mb-0">
@@ -1998,390 +2269,162 @@
       </div>
     </div>
 
-    <!-- 系统使用手册页面 -->
-    <div id="about-section" class="content-section">
+    <!-- 系统设置内容 -->
+    <div id="system-settings-section" class="content-section">
       <div class="content-header">
         <h2 class="mb-0">
-          <i class="bi bi-book me-2"></i>
-          系统使用手册
+          <i class="bi bi-gear me-2"></i>
+          系统设置
         </h2>
-        <p class="text-muted mb-0">闲鱼自动回复管理系统 - 完整功能说明与使用指南</p>
+        <p class="text-muted mb-0">管理系统配置和用户设置</p>
       </div>
-      <div class="content-body p-0">
-        <div class="manual-wrapper">
-          <!-- 手册侧边导航 -->
-          <div class="manual-sidebar" id="manualSidebar">
-            <div class="manual-sidebar-header">
-              <i class="bi bi-list-ul me-2"></i>功能导航
+      <div class="content-body">
+        <div class="row">
+          <!-- 主题设置 -->
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <i class="bi bi-palette me-2"></i>主题设置
+              </div>
+              <div class="card-body">
+                <form id="themeForm">
+                  <div class="mb-3">
+                    <label for="themeColor" class="form-label">主题颜色</label>
+                    <select class="form-select" id="themeColor">
+                      <option value="blue">蓝色</option>
+                      <option value="green">绿色</option>
+                      <option value="purple">紫色</option>
+                      <option value="red">红色</option>
+                      <option value="orange">橙色</option>
+                    </select>
+                  </div>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-1"></i>应用主题
+                  </button>
+                </form>
+              </div>
             </div>
-            <nav class="manual-nav">
-              <a href="#manual-dashboard" class="manual-nav-link active">仪表盘</a>
-              <a href="#manual-accounts" class="manual-nav-link">账号管理</a>
-              <a href="#manual-items" class="manual-nav-link">商品管理</a>
-              <a href="#manual-orders" class="manual-nav-link">订单管理</a>
-              <a href="#manual-auto-reply" class="manual-nav-link">自动回复</a>
-              <a href="#manual-ai-conversation" class="manual-nav-link">AI对话历史</a>
-              <a href="#manual-items-reply" class="manual-nav-link">指定商品回复</a>
-              <a href="#manual-cards" class="manual-nav-link">卡券管理</a>
-              <a href="#manual-auto-delivery" class="manual-nav-link">自动发货</a>
-              <a href="#manual-notification-channels" class="manual-nav-link">通知渠道</a>
-              <a href="#manual-message-notifications" class="manual-nav-link">消息通知</a>
-              <a href="#manual-item-search" class="manual-nav-link">商品搜索</a>
-              <a href="#manual-system-settings" class="manual-nav-link">系统设置</a>
-              <a href="#manual-user-management" class="manual-nav-link">用户管理</a>
-              <a href="#manual-role-permissions" class="manual-nav-link">角色配置</a>
-              <a href="#manual-logs" class="manual-nav-link">系统日志</a>
-              <a href="#manual-data-management" class="manual-nav-link">数据管理</a>
-            </nav>
           </div>
-          <!-- 手册正文内容 -->
-          <div class="manual-content" id="manualContent">
+        </div>
 
-            <div class="manual-section" id="manual-dashboard">
-              <h3 class="manual-section-title"><i class="bi bi-speedometer2 me-2"></i>仪表盘</h3>
-              <p class="manual-desc">仪表盘是系统的概览首页，展示系统运行的核心数据和状态。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>统计卡片：</strong>顶部展示账号总数、关键词总数、在线账号数、今日订单数等关键指标，帮助您快速了解系统概况。</li>
-                <li><strong>账号状态列表：</strong>下方以表格形式展示每个闲鱼账号的详细信息，包括账号名称、商品数量、在线状态、今日消息数、今日订单数等。</li>
-                <li><strong>快捷操作：</strong>每个账号行支持快速查看商品、查看订单、查看回复设置等操作。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>登录系统后默认进入仪表盘页面。</li>
-                <li>浏览顶部统计卡片了解整体运行状态。</li>
-                <li>查看账号列表，点击操作按钮进行快速导航。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-accounts">
-              <h3 class="manual-section-title"><i class="bi bi-people me-2"></i>账号管理</h3>
-              <p class="manual-desc">管理所有闲鱼Cookie账号，支持添加、删除、启用/禁用、扫码登录等操作。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>添加账号：</strong>支持通过Cookie字符串添加账号，也可通过扫码登录方式添加。</li>
-                <li><strong>扫码登录：</strong>点击"扫码登录"按钮，弹窗显示二维码，使用闲鱼App扫描完成登录，系统自动获取Cookie。</li>
-                <li><strong>账号列表：</strong>展示所有已添加的账号，支持按状态筛选。</li>
-                <li><strong>账号操作：</strong>每个账号可进行启用/禁用、开启/关闭自动确认、设置备注、调整暂停时长、删除等操作。</li>
-                <li><strong>批量导入：</strong>支持批量导入Cookie账号。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"账号管理"页面，点击"添加账号"或"扫码登录"。</li>
-                <li>添加成功后，在列表中查看账号信息。</li>
-                <li>使用右侧操作按钮管理账号状态和配置。</li>
-                <li>定期检查Cookie有效性，及时续期失效的账号。</li>
-              </ol>
-              <div class="manual-tip">
-                <i class="bi bi-lightbulb me-1"></i>
-                <strong>提示：</strong>Cookie过期后需要重新扫码登录，建议定期检查账号状态。
+        <!-- 注册设置 (仅管理员可见) -->
+        <div id="registration-settings" class="row mt-4" style="display: none;">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <i class="bi bi-person-plus me-2"></i>注册设置
+                <span class="badge bg-warning ms-2">管理员专用</span>
+              </div>
+              <div class="card-body">
+                <div class="mb-3">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="registrationEnabled">
+                    <label class="form-check-label" for="registrationEnabled">
+                      <strong>开启用户注册</strong>
+                    </label>
+                  </div>
+                  <div class="form-text">
+                    <i class="bi bi-info-circle me-1"></i>
+                    关闭后，新用户将无法注册账号，登录页面也不会显示注册链接
+                  </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="updateRegistrationSettings()">
+                  <i class="bi bi-check-circle me-1"></i>保存设置
+                </button>
+                <div id="registrationStatus" class="mt-3" style="display: none;">
+                  <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <span id="registrationStatusText"></span>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="manual-section" id="manual-items">
-              <h3 class="manual-section-title"><i class="bi bi-box me-2"></i>商品管理</h3>
-              <p class="manual-desc">管理闲鱼账号发布的商品信息，支持浏览、搜索、筛选和批量操作。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>商品列表：</strong>展示所有商品，包含商品标题、图片、价格、所属账号、状态等信息。</li>
-                <li><strong>搜索筛选：</strong>按关键词、所属账号、商品状态等进行搜索和筛选。</li>
-                <li><strong>批量操作：</strong>支持批量删除、批量导出商品信息。</li>
-                <li><strong>多规格商品：</strong>支持展示和管理多规格商品。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"商品管理"页面，系统自动加载所有商品。</li>
-                <li>使用搜索框和筛选条件查找目标商品。</li>
-                <li>勾选商品进行批量操作或点击单个商品查看详情。</li>
-              </ol>
-            </div>
+        <!-- 外发配置 (仅管理员可见) -->
+        <div id="outgoing-configs" class="row mt-4" style="display: none;">
+          <!-- 外发配置内容将由JavaScript动态生成 -->
+        </div>
 
-            <div class="manual-section" id="manual-orders">
-              <h3 class="manual-section-title"><i class="bi bi-receipt me-2"></i>订单管理</h3>
-              <p class="manual-desc">查看和管理闲鱼账号的所有订单，支持按账号筛选和搜索。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>订单列表：</strong>展示所有订单信息，包括订单号、商品名称、金额、买家信息、订单状态、下单时间等。</li>
-                <li><strong>筛选：</strong>按所属账号、订单状态等条件筛选订单。</li>
-                <li><strong>搜索：</strong>支持按订单号或商品关键词搜索。</li>
-                <li><strong>订单详情：</strong>点击查看订单完整信息。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"订单管理"页面，系统自动加载订单数据。</li>
-                <li>使用顶部的账号筛选和搜索框查找目标订单。</li>
-                <li>点击订单行查看详细内容。</li>
-              </ol>
-            </div>
+        <!-- AI回复全局默认配置 (仅管理员可见) -->
+        <div id="ai-defaults-configs" class="row mt-4" style="display: none;">
+          <!-- AI回复全局默认配置内容将由JavaScript动态生成 -->
+        </div>
 
-            <div class="manual-section" id="manual-auto-reply">
-              <h3 class="manual-section-title"><i class="bi bi-chat-dots me-2"></i>自动回复</h3>
-              <p class="manual-desc">配置关键词自动回复规则，当买家发送的消息匹配关键词时自动回复预设内容。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>按账号配置：</strong>为每个闲鱼账号分别配置独立的关键词回复规则。</li>
-                <li><strong>关键词管理：</strong>支持添加、编辑、删除关键词，设置关键词的匹配模式（精确/模糊）。</li>
-                <li><strong>回复内容：</strong>支持文本回复和图片回复，可绑定到指定商品。</li>
-                <li><strong>默认回复：</strong>设置未匹配到关键词时的默认回复内容。</li>
-                <li><strong>AI智能回复：</strong>集成AI大模型，开启后可自动生成回复内容（需在系统设置中配置AI参数）。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"自动回复"页面，选择要配置的账号。</li>
-                <li>点击"添加关键词"，输入关键词和对应的回复内容。</li>
-                <li>可选：绑定到特定商品，设置匹配模式。</li>
-                <li>配置默认回复作为兜底回复内容。</li>
-                <li>开启自动回复开关，保存配置。</li>
-              </ol>
-              <div class="manual-tip">
-                <i class="bi bi-lightbulb me-1"></i>
-                <strong>提示：</strong>建议为每个账号配置至少3-5个常用关键词，并设置合理的默认回复，以提升回复率。
+        <!-- 备份管理 (仅管理员可见) -->
+        <div id="backup-management" class="row mt-4" style="display: none;">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <i class="bi bi-archive me-2"></i>备份管理
+                <span class="badge bg-warning ms-2">管理员专用</span>
+              </div>
+              <div class="card-body">
+                <div class="row">
+                  <!-- 数据库备份 -->
+                  <div class="col-md-6">
+                    <h6 class="mb-3">
+                      <i class="bi bi-database-down me-2"></i>数据库备份
+                    </h6>
+                    <p class="text-muted mb-3">直接下载完整的数据库文件，包含所有用户数据和设置</p>
+                    <button type="button" class="btn btn-success" onclick="downloadDatabaseBackup()">
+                      <i class="bi bi-download me-1"></i>下载数据库
+                    </button>
+                    <div class="mt-2">
+                      <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        推荐方式：完整备份，恢复简单
+                      </small>
+                    </div>
+                  </div>
+
+                  <!-- 数据库恢复 -->
+                  <div class="col-md-6">
+                    <h6 class="mb-3">
+                      <i class="bi bi-database-up me-2"></i>数据库恢复
+                    </h6>
+                    <p class="text-muted mb-3">上传数据库文件直接替换当前数据库，系统将自动重新加载</p>
+                    <div class="mb-3">
+                      <input type="file" class="form-control" id="databaseFile" accept=".db">
+                    </div>
+                    <button type="button" class="btn btn-danger" onclick="uploadDatabaseBackup()">
+                      <i class="bi bi-upload me-1"></i>恢复数据库
+                    </button>
+                    <div class="mt-2">
+                      <small class="text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        警告：将覆盖所有当前数据！
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 系统缓存管理 -->
+                <div class="row mt-4">
+                  <div class="col-12">
+                    <h6 class="mb-3">
+                      <i class="bi bi-arrow-clockwise me-2"></i>系统缓存管理
+                    </h6>
+                    <p class="text-muted mb-3">如果导入备份后关键字等数据没有立即更新，可以手动刷新系统缓存</p>
+                    <button type="button" class="btn btn-info" onclick="reloadSystemCache()">
+                      <i class="bi bi-arrow-clockwise me-1"></i>刷新系统缓存
+                    </button>
+                  </div>
+                </div>
+
+                <div class="alert alert-warning mt-4" role="alert">
+                  <i class="bi bi-exclamation-triangle me-2"></i>
+                  <strong>注意：</strong>导入备份将会覆盖当前系统的所有数据，请谨慎操作！建议在导入前先导出当前数据作为备份。
+                </div>
               </div>
             </div>
-
-            <div class="manual-section" id="manual-ai-conversation">
-              <h3 class="manual-section-title"><i class="bi bi-robot me-2"></i>AI对话历史</h3>
-              <p class="manual-desc">查看AI智能回复的对话记录，了解AI与买家的完整交互过程。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>对话列表：</strong>展示所有AI参与的对话，包含买家信息、所属账号、对话时间等。</li>
-                <li><strong>对话详情：</strong>点击查看完整的对话内容，包括买家消息和AI回复。</li>
-                <li><strong>搜索：</strong>支持按关键词搜索对话内容。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"AI对话历史"页面查看所有AI对话记录。</li>
-                <li>点击任意对话查看详细的交互内容。</li>
-                <li>通过搜索框快速定位特定对话。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-items-reply">
-              <h3 class="manual-section-title"><i class="bi bi-tag me-2"></i>指定商品回复</h3>
-              <p class="manual-desc">为特定商品配置独立的回复规则，不同商品可以有不同的自动回复内容。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>商品绑定：</strong>选择指定商品并为其配置专属回复内容。</li>
-                <li><strong>独立规则：</strong>每个商品的回复规则独立于全局关键词规则。</li>
-                <li><strong>优先级：</strong>指定商品回复的优先级高于通用关键词回复。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"指定商品回复"页面。</li>
-                <li>选择需要配置的账号和商品。</li>
-                <li>设置该商品对应的回复内容。</li>
-                <li>保存配置，当买家咨询该商品时将自动回复设置的内容。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-cards">
-              <h3 class="manual-section-title"><i class="bi bi-credit-card me-2"></i>卡券管理</h3>
-              <p class="manual-desc">管理数字卡券（如兑换码、卡密等），支持批量导入和自动发货。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>卡券类型：</strong>支持普通卡密和API类型的卡券。</li>
-                <li><strong>多规格：</strong>支持为卡券设置不同规格（面值、类型等）。</li>
-                <li><strong>批量导入：</strong>支持批量导入卡券数据。</li>
-                <li><strong>库存管理：</strong>自动统计卡券库存数量。</li>
-                <li><strong>图片上传：</strong>支持上传卡券相关图片。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"卡券管理"页面，点击"新建卡券"。</li>
-                <li>填写卡券名称、类型、规格等信息。</li>
-                <li>批量导入卡券内容（兑换码/卡密）。</li>
-                <li>关联到自动发货规则，实现购买后自动发货。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-auto-delivery">
-              <h3 class="manual-section-title"><i class="bi bi-send me-2"></i>自动发货</h3>
-              <p class="manual-desc">配置自动发货规则，买家下单付款后自动发送卡券或虚拟商品。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>发货规则：</strong>创建规则并关联卡券，设置触发条件。</li>
-                <li><strong>商品关联：</strong>将发货规则绑定到指定商品。</li>
-                <li><strong>自动发送：</strong>买家付款后系统自动发送卡券内容到买家聊天窗口。</li>
-                <li><strong>库存检查：</strong>自动检查卡券库存，库存不足时停止自动发货。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"自动发货"页面，点击"新建规则"。</li>
-                <li>选择关联的商品和卡券。</li>
-                <li>配置触发条件和发货内容。</li>
-                <li>启用规则，保存配置。</li>
-              </ol>
-              <div class="manual-tip">
-                <i class="bi bi-lightbulb me-1"></i>
-                <strong>提示：</strong>请确保卡券库存充足，以免自动发货失败。
-              </div>
-            </div>
-
-            <div class="manual-section" id="manual-notification-channels">
-              <h3 class="manual-section-title"><i class="bi bi-bell me-2"></i>通知渠道</h3>
-              <p class="manual-desc">配置消息通知渠道，支持通过多种方式接收系统通知。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>Webhook：</strong>配置Webhook地址，系统将通知发送到指定URL。</li>
-                <li><strong>Bark：</strong>支持Bark推送，在iOS设备上接收通知。</li>
-                <li><strong>其他渠道：</strong>支持更多自定义通知方式。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"通知渠道"页面，点击"添加渠道"。</li>
-                <li>选择渠道类型，填写配置信息。</li>
-                <li>保存并测试通知是否正常送达。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-message-notifications">
-              <h3 class="manual-section-title"><i class="bi bi-envelope me-2"></i>消息通知</h3>
-              <p class="manual-desc">为每个账号单独配置消息通知规则，当收到新消息时通过通知渠道发送提醒。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>按账号配置：</strong>为不同的闲鱼账号设置不同的通知策略。</li>
-                <li><strong>通知规则：</strong>选择触发通知的事件类型（新消息、新订单等）。</li>
-                <li><strong>通知渠道绑定：</strong>将通知规则关联到已配置的通知渠道。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"消息通知"页面，选择要配置的账号。</li>
-                <li>选择通知触发条件和目标通知渠道。</li>
-                <li>保存配置，当触发条件满足时将自动发送通知。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-item-search">
-              <h3 class="manual-section-title"><i class="bi bi-search me-2"></i>商品搜索</h3>
-              <p class="manual-desc">搜索闲鱼平台上的商品，查看商品信息和卖家情况。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>关键词搜索：</strong>输入关键词搜索闲鱼平台商品。</li>
-                <li><strong>搜索结果：</strong>展示商品标题、价格、卖家信息、商品链接等。</li>
-                <li><strong>筛选排序：</strong>支持按价格、销量等维度排序筛选。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"商品搜索"页面。</li>
-                <li>输入搜索关键词，点击搜索。</li>
-                <li>浏览搜索结果，点击查看商品详情。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-system-settings">
-              <h3 class="manual-section-title"><i class="bi bi-gear me-2"></i>系统设置</h3>
-              <p class="manual-desc">配置系统的全局参数，包括主题颜色、AI模型、代理设置、注册开关等。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>主题颜色：</strong>调整系统界面主题色。</li>
-                <li><strong>AI设置：</strong>配置AI回复的模型名称、API地址、Prompt提示词等参数。</li>
-                <li><strong>代理设置：</strong>配置网络代理，用于访问外部API。</li>
-                <li><strong>注册开关：</strong>控制是否允许新用户通过注册页面自行注册账号。关闭后仅管理员可在用户管理中添加用户。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"系统设置"页面。</li>
-                <li>按需调整各项配置参数。</li>
-                <li>点击"保存"使配置生效。</li>
-              </ol>
-              <div class="manual-tip">
-                <i class="bi bi-lightbulb me-1"></i>
-                <strong>提示：</strong>修改AI设置后需要重新开启自动回复功能才能生效。
-              </div>
-            </div>
-
-            <div class="manual-section" id="manual-user-management">
-              <h3 class="manual-section-title"><i class="bi bi-people me-2"></i>用户管理</h3>
-              <p class="manual-desc">管理系统的用户账号，仅管理员可访问。支持添加、编辑、删除用户，以及分配角色。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>用户列表：</strong>以表格形式展示所有注册用户的信息（用户名、邮箱、角色、Cookie数、卡券数、注册时间）。</li>
-                <li><strong>添加用户：</strong>管理员可直接创建新用户，填写用户名、邮箱、密码，并选择角色。</li>
-                <li><strong>编辑用户：</strong>可修改用户的邮箱、重置密码，或变更角色（角色下拉来自"角色配置"中定义的角色）。</li>
-                <li><strong>删除用户：</strong>删除用户及其所有关联数据（Cookie、关键词、卡券等），不可恢复。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>使用管理员账号登录系统。</li>
-                <li>进入"用户管理"页面查看所有用户。</li>
-                <li>点击"添加用户"创建新账号，或点击编辑/删除按钮管理现有用户。</li>
-                <li>分配角色前请先在"角色配置"中定义好角色和对应的权限。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-role-permissions">
-              <h3 class="manual-section-title"><i class="bi bi-shield-lock me-2"></i>角色配置</h3>
-              <p class="manual-desc">管理角色和权限，控制不同用户可以访问的系统功能。仅管理员可访问。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>角色管理：</strong>支持创建自定义角色（如运营、客服等），内置 <code>admin</code>（全部权限）和 <code>user</code>（基础功能）角色不可删除。</li>
-                <li><strong>权限配置：</strong>每个角色可独立勾选 18 项系统功能的访问权限，包括仪表盘、账号管理、商品管理、订单管理、自动回复、AI对话历史、指定商品回复、卡券管理、自动发货、通知渠道、消息通知、商品搜索、系统设置、用户管理、系统日志、数据管理、备份导出、备份导入。</li>
-                <li><strong>全选/取消：</strong>编辑角色时支持一键全选或取消所有权限。</li>
-                <li><strong>用户关联：</strong>在"用户管理"中为用户分配角色后，该用户将根据角色获得对应的功能访问权限。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>点击左侧菜单"角色配置"进入页面。</li>
-                <li>点击"添加角色"输入角色名称创建新角色。</li>
-                <li>点击角色的"编辑"按钮，在弹出的窗口中勾选该角色应有的权限。</li>
-                <li>点击"保存"使配置生效。</li>
-                <li>进入"用户管理"页面，编辑用户时从角色下拉中选择刚创建的角色。</li>
-              </ol>
-              <div class="manual-tip">
-                <i class="bi bi-lightbulb me-1"></i>
-                <strong>提示：</strong><code>admin</code> 角色拥有全部权限且不可修改。<code>user</code> 角色默认拥有除管理员功能外的所有权限。
-              </div>
-            </div>
-
-            <div class="manual-section" id="manual-logs">
-              <h3 class="manual-section-title"><i class="bi bi-journal-text me-2"></i>系统日志</h3>
-              <p class="manual-desc">实时查看系统运行日志，支持日志级别筛选和自动刷新。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>实时日志：</strong>实时显示系统运行日志，支持自动滚动到最新。</li>
-                <li><strong>级别筛选：</strong>按INFO、WARN、ERROR等日志级别筛选显示。</li>
-                <li><strong>自动刷新：</strong>开启后日志自动更新，适合监控系统运行状态。</li>
-                <li><strong>日志搜索：</strong>支持关键词搜索日志内容。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"系统日志"页面。</li>
-                <li>选择日志级别筛选需要查看的日志。</li>
-                <li>开启"自动刷新"实时监控系统运行。</li>
-                <li>使用搜索框定位特定日志内容。</li>
-              </ol>
-            </div>
-
-            <div class="manual-section" id="manual-data-management">
-              <h3 class="manual-section-title"><i class="bi bi-database me-2"></i>数据管理</h3>
-              <p class="manual-desc">管理系统的SQLite数据库，支持查看表数据、导出备份、导入恢复。</p>
-              <h4>功能说明</h4>
-              <ul>
-                <li><strong>数据表浏览：</strong>选择数据库表，查看表中的所有数据记录。</li>
-                <li><strong>数据导出：</strong>将数据库导出为备份文件，支持下载。</li>
-                <li><strong>数据导入：</strong>导入之前备份的数据库文件，恢复数据。</li>
-                <li><strong>记录统计：</strong>显示每个表的记录总数。</li>
-              </ul>
-              <h4>使用步骤</h4>
-              <ol>
-                <li>进入"数据管理"页面。</li>
-                <li>从下拉列表中选择要查看的数据表。</li>
-                <li>浏览表数据或执行导出/导入操作。</li>
-                <li>定期备份数据库以防数据丢失。</li>
-              </ol>
-              <div class="manual-warn">
-                <i class="bi bi-exclamation-triangle me-1"></i>
-                <strong>注意：</strong>导入数据会覆盖当前数据库，请提前备份。
-              </div>
-            </div>
-
-
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 全局底部信息 -->
+<!-- 全局底部信息 -->
     <div class="global-footer">
       <span>闲鱼自动回复管理系统 &copy; 2026 - 更多资源：<a href="https://link3.cc/88531cn" target="_blank">https://link3.cc/88531cn</a></span>
     </div>
@@ -3238,7 +3281,7 @@
 
   <!-- JS依赖 -->
   <script src="/static/lib/bootstrap/bootstrap.bundle.min.js"></script>
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=2"></script>
 
   <!-- 默认回复管理模态框 -->
   <div class="modal fade" id="defaultReplyModal" tabindex="-1" aria-labelledby="defaultReplyModalLabel" aria-hidden="true">
@@ -3445,8 +3488,6 @@
     </div>
   </div>
 
-  
-
   <!-- AI回复配置模态框 -->
   <div class="modal fade" id="aiReplyConfigModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -3508,9 +3549,15 @@
 
                   <div class="mb-3">
                     <label for="aiApiKey" class="form-label">API密钥 <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="aiApiKey" placeholder="请输入API密钥" required>
+                    <div class="input-group">
+                      <input type="password" class="form-control" id="aiApiKey" placeholder="输入新密钥覆盖原有值">
+                      <button class="btn btn-outline-secondary" type="button" onclick="toggleApiKeyVisibility()">
+                        <i class="bi bi-eye" id="aiApiKeyToggleIcon"></i>
+                      </button>
+                    </div>
                     <small class="form-text text-muted">
-                      通义千问请使用DashScope API Key，GPT请使用OpenAI API Key
+                      <i class="bi bi-shield-lock me-1"></i>
+                      密钥已掩码显示，如不修改则保持原值。
                     </small>
                   </div>
                 </div>
@@ -3886,6 +3933,525 @@
       </div>
     </div>
   </div>
+
+  <!-- 转卖配置模态框 -->
+  <div class="modal fade" id="resellModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-shop me-2"></i>
+            转卖到阿奇索
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- 商品预览 -->
+          <div class="card mb-3">
+            <div class="card-body">
+              <div class="d-flex">
+                <img id="resellItemImg" src="" class="me-3" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                <div>
+                  <h6 id="resellItemTitle" class="mb-1"></h6>
+                  <p class="text-primary fw-bold mb-0" id="resellItemPrice"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 阿奇索账户选择 -->
+          <div class="mb-3">
+            <label class="form-label">阿奇索账户 <span class="text-danger">*</span></label>
+            <select class="form-select" id="resellAgisoAccount">
+              <option value="">请选择阿奇索账户</option>
+            </select>
+            <div class="form-text">
+              <a href="#" onclick="showAgisoAccountManager(); return false;">管理阿奇索账户</a>
+            </div>
+          </div>
+
+          <!-- 转卖价格 -->
+          <div class="mb-3">
+            <label class="form-label">转卖价格 <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="text" class="form-control" id="resellPrice" placeholder="请输入转卖价格">
+            </div>
+          </div>
+
+          <!-- 库存数量 -->
+          <div class="mb-3">
+            <label class="form-label">库存数量</label>
+            <input type="number" class="form-control" id="resellStock" value="1" min="1">
+          </div>
+
+          <!-- 商品描述 -->
+          <div class="mb-3">
+            <label class="form-label">商品描述</label>
+            <textarea class="form-control" id="resellDescription" rows="3" placeholder="留空将使用原标题"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-primary" onclick="confirmResell()" id="resellConfirmBtn">
+            <i class="bi bi-shop me-1"></i>
+            确认转卖
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 阿奇索账户管理模态框 -->
+  <div class="modal fade" id="agisoAccountModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-person-gear me-2"></i>
+            阿奇索账户管理
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <!-- 获取指引 -->
+          <div class="alert alert-primary mb-4">
+            <h6 class="alert-heading mb-3">
+              <i class="bi bi-info-circle me-2"></i>
+              如何获取阿奇索 Cookie 和 Authorization？
+            </h6>
+            <ol class="mb-0" style="font-size: 0.9em;">
+              <li class="mb-2">
+                <strong>打开阿奇索官网</strong>
+                <br>
+                <a href="https://aldsidle.agiso.com/" target="_blank" class="text-decoration-none">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>https://aldsidle.agiso.com/
+                </a>
+              </li>
+              <li class="mb-2">
+                <strong>登录你的阿奇索账号</strong>
+                <br>
+                <span class="text-muted">如果还没使用过阿奇索，需要先用闲鱼账号进行产品绑定授权</span>
+              </li>
+              <li class="mb-2">
+                <strong>打开浏览器开发者工具</strong>
+                <br>
+                <span class="text-muted">按 <code>F12</code> 键，或右键页面选择"检查"</span>
+              </li>
+              <li class="mb-2">
+                <strong>找到网络请求</strong>
+                <br>
+                <span class="text-muted">选择"网络(Network)"标签，在过滤框中输入 <code>GetUserInfo</code></span>
+              </li>
+              <li class="mb-2">
+                <strong>刷新页面并复制数据</strong>
+                <br>
+                <span class="text-muted">刷新网页，点击获取到的请求，在右侧"请求标头"中找到并复制：</span>
+                <ul class="mt-1 mb-0">
+                  <li><code>Cookie</code> 字段的完整内容</li>
+                  <li><code>Authorization</code> 字段的完整内容</li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+
+          <!-- 添加账户表单 -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <i class="bi bi-plus-circle me-2"></i>
+              添加新账户
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label">账户名称</label>
+                <input type="text" class="form-control" id="agisoAccountName" placeholder="例如：我的阿奇索账户">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Cookie</label>
+                <textarea class="form-control" id="agisoAccountCookie" rows="3" placeholder="粘贴从浏览器获取的Cookie内容"></textarea>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Authorization</label>
+                <input type="text" class="form-control" id="agisoAccountAuth" placeholder="粘贴从浏览器获取的Authorization内容">
+              </div>
+              <button type="button" class="btn btn-primary" onclick="addAgisoAccount()">
+                <i class="bi bi-plus-lg me-1"></i>
+                添加账户
+              </button>
+            </div>
+          </div>
+
+          <!-- 账户列表 -->
+          <div class="card">
+            <div class="card-header">
+              <i class="bi bi-list-ul me-2"></i>
+              已有账户
+            </div>
+            <div class="card-body">
+              <div id="agisoAccountList">
+                <!-- 账户列表将在这里动态加载 -->
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 转卖记录模态框 -->
+  <div class="modal fade" id="resellRecordsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-clock-history me-2"></i>
+            转卖记录
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="resellRecordsList">
+            <!-- 转卖记录将在这里动态加载 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 转卖功能脚本 -->
+  <script>
+    // 转卖相关变量
+    let currentResellItem = null;
+
+    // 打开转卖弹窗
+    function openResellModal(item) {
+      currentResellItem = item;
+      
+      // 填充商品信息
+      document.getElementById('resellItemTitle').textContent = item.title || '未知商品';
+      document.getElementById('resellItemPrice').textContent = item.price || '¥0';
+      
+      const img = document.getElementById('resellItemImg');
+      img.src = item.main_image || 'https://via.placeholder.com/80x80?text=暂无图片';
+      img.onerror = function() { this.src = 'https://via.placeholder.com/80x80?text=图片加载失败'; };
+      
+      // 预填价格
+      const priceStr = (item.price || '').replace('¥', '').trim();
+      document.getElementById('resellPrice').value = priceStr;
+      
+      // 清空描述
+      document.getElementById('resellDescription').value = '';
+      document.getElementById('resellStock').value = '1';
+      
+      // 加载阿奇索账户列表
+      loadAgisoAccountsForResell();
+      
+      // 显示弹窗
+      const modal = new bootstrap.Modal(document.getElementById('resellModal'));
+      modal.show();
+    }
+
+    // 加载阿奇索账户列表（用于转卖弹窗）
+    async function loadAgisoAccountsForResell() {
+      const select = document.getElementById('resellAgisoAccount');
+      select.innerHTML = '<option value="">加载中...</option>';
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const response = await fetch('/agiso/accounts', { headers });
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          select.innerHTML = '<option value="">请选择阿奇索账户</option>';
+          result.data.forEach(function(account) {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.name;
+            select.appendChild(option);
+          });
+        } else {
+          select.innerHTML = '<option value="">暂无账户，请先添加</option>';
+        }
+      } catch (error) {
+        console.error('加载阿奇索账户失败:', error);
+        select.innerHTML = '<option value="">加载失败</option>';
+      }
+    }
+
+    // 确认转卖
+    async function confirmResell() {
+      if (!currentResellItem) {
+        alert('商品信息丢失，请重试');
+        return;
+      }
+      
+      const accountId = document.getElementById('resellAgisoAccount').value;
+      const price = document.getElementById('resellPrice').value.trim();
+      const stock = parseInt(document.getElementById('resellStock').value) || 1;
+      const description = document.getElementById('resellDescription').value.trim();
+      
+      if (!accountId) {
+        alert('请选择阿奇索账户');
+        return;
+      }
+      
+      if (!price) {
+        alert('请输入转卖价格');
+        return;
+      }
+      
+      // 禁用按钮，显示加载状态
+      const confirmBtn = document.getElementById('resellConfirmBtn');
+      const originalText = confirmBtn.innerHTML;
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>发布中...';
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const requestData = {
+          agiso_account_id: parseInt(accountId),
+          source_item: currentResellItem,
+          resell_price: price,
+          stock: stock,
+          description: description || currentResellItem.title || ''
+        };
+        
+        const response = await fetch('/resell/publish', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(requestData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('转卖成功！');
+          const modal = bootstrap.Modal.getInstance(document.getElementById('resellModal'));
+          modal.hide();
+        } else {
+          alert('转卖失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('转卖请求失败:', error);
+        alert('转卖请求失败: ' + error.message);
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalText;
+      }
+    }
+
+    // 显示阿奇索账户管理弹窗
+    function showAgisoAccountManager() {
+      loadAgisoAccounts();
+      const modal = new bootstrap.Modal(document.getElementById('agisoAccountModal'));
+      modal.show();
+    }
+
+    // 加载阿奇索账户列表
+    async function loadAgisoAccounts() {
+      const listDiv = document.getElementById('agisoAccountList');
+      listDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const response = await fetch('/agiso/accounts', { headers });
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          let html = '<div class="table-responsive"><table class="table table-hover">';
+          html += '<thead><tr><th>名称</th><th>Cookie</th><th>Authorization</th><th>操作</th></tr></thead>';
+          html += '<tbody>';
+          
+          result.data.forEach(function(account) {
+            html += '<tr>';
+            html += '<td>' + (account.name || '') + '</td>';
+            html += '<td><code>' + (account.cookie || '') + '</code></td>';
+            html += '<td><code>' + (account.authorization || '') + '</code></td>';
+            html += '<td><button class="btn btn-outline-danger btn-sm" onclick="deleteAgisoAccount(' + account.id + ')"><i class="bi bi-trash"></i></button></td>';
+            html += '</tr>';
+          });
+          
+          html += '</tbody></table></div>';
+          listDiv.innerHTML = html;
+        } else {
+          listDiv.innerHTML = '<div class="text-muted text-center py-3">暂无阿奇索账户，请添加</div>';
+        }
+      } catch (error) {
+        console.error('加载阿奇索账户失败:', error);
+        listDiv.innerHTML = '<div class="text-danger text-center py-3">加载失败</div>';
+      }
+    }
+
+    // 添加阿奇索账户
+    async function addAgisoAccount() {
+      const name = document.getElementById('agisoAccountName').value.trim();
+      const cookie = document.getElementById('agisoAccountCookie').value.trim();
+      const authorization = document.getElementById('agisoAccountAuth').value.trim();
+      
+      if (!name) {
+        alert('请输入账户名称');
+        return;
+      }
+      
+      if (!cookie) {
+        alert('请输入Cookie');
+        return;
+      }
+      
+      if (!authorization) {
+        alert('请输入Authorization');
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const response = await fetch('/agiso/accounts', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ name: name, cookie: cookie, authorization: authorization })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('添加成功');
+          document.getElementById('agisoAccountName').value = '';
+          document.getElementById('agisoAccountCookie').value = '';
+          document.getElementById('agisoAccountAuth').value = '';
+          loadAgisoAccounts();
+        } else {
+          alert('添加失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('添加阿奇索账户失败:', error);
+        alert('添加失败: ' + error.message);
+      }
+    }
+
+    // 删除阿奇索账户
+    async function deleteAgisoAccount(accountId) {
+      if (!confirm('确定要删除这个账户吗？')) {
+        return;
+      }
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const response = await fetch('/agiso/accounts/' + accountId, {
+          method: 'DELETE',
+          headers: headers
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('删除成功');
+          loadAgisoAccounts();
+        } else {
+          alert('删除失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('删除阿奇索账户失败:', error);
+        alert('删除失败: ' + error.message);
+      }
+    }
+
+    // 显示转卖记录
+    function showResellRecords() {
+      loadResellRecords();
+      const modal = new bootstrap.Modal(document.getElementById('resellRecordsModal'));
+      modal.show();
+    }
+
+    // 加载转卖记录
+    async function loadResellRecords() {
+      const listDiv = document.getElementById('resellRecordsList');
+      listDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> 加载中...</div>';
+      
+      try {
+        const token = localStorage.getItem('auth_token');
+        const headers = {};
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        
+        const response = await fetch('/resell/records', { headers });
+        const result = await response.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+          let html = '<div class="table-responsive"><table class="table table-hover">';
+          html += '<thead><tr><th>商品名称</th><th>原价</th><th>转卖价</th><th>状态</th><th>时间</th></tr></thead>';
+          html += '<tbody>';
+          
+          result.data.forEach(function(record) {
+            const statusClass = {
+              'pending': 'warning',
+              'processing': 'info',
+              'success': 'success',
+              'failed': 'danger'
+            }[record.status] || 'secondary';
+            
+            const statusText = {
+              'pending': '待处理',
+              'processing': '处理中',
+              'success': '成功',
+              'failed': '失败'
+            }[record.status] || record.status;
+            
+            html += '<tr>';
+            html += '<td>' + (record.source_title || '-') + '</td>';
+            html += '<td>' + (record.source_price || '-') + '</td>';
+            html += '<td>' + (record.resell_price || '-') + '</td>';
+            html += '<td><span class="badge bg-' + statusClass + '">' + statusText + '</span></td>';
+            html += '<td>' + (record.created_at || '-') + '</td>';
+            html += '</tr>';
+          });
+          
+          html += '</tbody></table></div>';
+          listDiv.innerHTML = html;
+        } else {
+          listDiv.innerHTML = '<div class="text-muted text-center py-3">暂无转卖记录</div>';
+        }
+      } catch (error) {
+        console.error('加载转卖记录失败:', error);
+        listDiv.innerHTML = '<div class="text-danger text-center py-3">加载失败</div>';
+      }
+    }
+  </script>
 
 </body>
 </html>

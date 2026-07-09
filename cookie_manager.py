@@ -18,6 +18,7 @@ class CookieManager:
         self.cookie_status: Dict[str, bool] = {}  # 账号启用状态
         self.auto_confirm_settings: Dict[str, bool] = {}  # 自动确认发货设置
         self.online_status: Dict[str, bool] = {}  # WebSocket 真实在线状态
+        self.xianyu_instances: Dict[str, object] = {}  # XianyuLive 实例缓存
         self._load_from_db()
 
     def _load_from_db(self):
@@ -71,6 +72,7 @@ class CookieManager:
             logger.info(f"【{cookie_id}】开始创建XianyuLive实例...")
             logger.info(f"【{cookie_id}】Cookie值长度: {len(cookie_value)}")
             live = XianyuLive(cookie_value, cookie_id=cookie_id, user_id=user_id)
+            self.xianyu_instances[cookie_id] = live
             logger.info(f"【{cookie_id}】XianyuLive实例创建成功，开始调用main()...")
             await live.main()
         except asyncio.CancelledError:
@@ -84,14 +86,14 @@ class CookieManager:
         if cookie_id in self.tasks:
             raise ValueError("Cookie ID already exists")
         self.cookies[cookie_id] = cookie_value
-        # 保存到数据库，如果没有指定user_id，则保持原有绑定关系
-        db_manager.save_cookie(cookie_id, cookie_value, user_id)
+
+        # 数据库操作放到线程池，避免阻塞事件循环导致其他账号心跳超时离线
+        await asyncio.to_thread(db_manager.save_cookie, cookie_id, cookie_value, user_id)
 
         # 获取实际保存的user_id（如果没有指定，数据库会返回实际的user_id）
         actual_user_id = user_id
         if actual_user_id is None:
-            # 从数据库获取Cookie对应的user_id
-            cookie_info = db_manager.get_cookie_details(cookie_id)
+            cookie_info = await asyncio.to_thread(db_manager.get_cookie_details, cookie_id)
             if cookie_info:
                 actual_user_id = cookie_info.get('user_id')
 
@@ -105,8 +107,9 @@ class CookieManager:
             task.cancel()
         self.cookies.pop(cookie_id, None)
         self.keywords.pop(cookie_id, None)
-        # 从数据库删除
-        db_manager.delete_cookie(cookie_id)
+        self.xianyu_instances.pop(cookie_id, None)
+        # 数据库操作放到线程池，避免阻塞事件循环
+        await asyncio.to_thread(db_manager.delete_cookie, cookie_id)
         logger.info(f"已移除账号: {cookie_id}")
 
     # ------------------------ 对外线程安全接口 ------------------------
@@ -149,7 +152,7 @@ class CookieManager:
             original_keywords = []
             original_status = True
 
-            cookie_info = db_manager.get_cookie_details(cookie_id)
+            cookie_info = await asyncio.to_thread(db_manager.get_cookie_details, cookie_id)
             if cookie_info:
                 original_user_id = cookie_info.get('user_id')
 
@@ -166,7 +169,7 @@ class CookieManager:
 
             # 更新Cookie值（保持原有user_id，不删除关键词）
             self.cookies[cookie_id] = new_value
-            db_manager.save_cookie(cookie_id, new_value, original_user_id)
+            await asyncio.to_thread(db_manager.save_cookie, cookie_id, new_value, original_user_id)
 
             # 恢复关键词和状态
             self.keywords[cookie_id] = original_keywords
@@ -248,16 +251,15 @@ class CookieManager:
             cookie_info = db_manager.get_cookie_details(cookie_id)
             user_id = cookie_info.get('user_id') if cookie_info else None
 
-            # 使用异步方式启动任务
+            # 使用异步方式启动任务（直接调用_run_xianyu，跳过重复的数据库操作）
+            async def _start():
+                task = self.loop.create_task(self._run_xianyu(cookie_id, cookie_value, user_id))
+                self.tasks[cookie_id] = task
+
             if hasattr(self.loop, 'is_running') and self.loop.is_running():
-                # 事件循环正在运行，使用run_coroutine_threadsafe
-                fut = asyncio.run_coroutine_threadsafe(
-                    self._add_cookie_async(cookie_id, cookie_value, user_id),
-                    self.loop
-                )
-                fut.result(timeout=5)  # 等待最多5秒
+                fut = asyncio.run_coroutine_threadsafe(_start(), self.loop)
+                fut.result(timeout=5)
             else:
-                # 事件循环未运行，直接创建任务
                 task = self.loop.create_task(self._run_xianyu(cookie_id, cookie_value, user_id))
                 self.tasks[cookie_id] = task
 
@@ -313,6 +315,10 @@ class CookieManager:
     def get_auto_confirm_setting(self, cookie_id: str) -> bool:
         """获取账号的自动确认发货设置"""
         return self.auto_confirm_settings.get(cookie_id, True)  # 默认开启
+
+    def get_xianyu(self, cookie_id: str):
+        """获取指定账号的XianyuLive实例"""
+        return self.xianyu_instances.get(cookie_id)
 
 
 # 在 Start.py 中会把此变量赋值为具体实例

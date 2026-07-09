@@ -197,16 +197,16 @@
                 
                 <div class="mb-3">
                     <label for="captchaCode" class="form-label">
-                        <i class="bi bi-shield-lock me-1"></i>图形验证码
+                        <i class="bi bi-shield-lock me-1"></i>数字验证码
                     </label>
                     <div class="row g-2">
                         <div class="col-7">
                             <input type="text" class="form-control" id="captchaCode" name="captchaCode"
-                                   placeholder="输入4位验证码" maxlength="4" required>
+                                   placeholder="输入4位数字验证码" maxlength="4" inputmode="numeric" pattern="\d*" required>
                         </div>
                         <div class="col-5">
                             <div class="captcha-container" style="position: relative;">
-                                <img id="captchaImage" src="" alt="图形验证码"
+                                <img id="captchaImage" src="" alt="数字验证码"
                                      style="width: 100%; height: 32px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;"
                                      onclick="refreshCaptcha()">
                                 <div id="captchaLoading" class="text-center" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
@@ -216,7 +216,7 @@
                         </div>
                     </div>
                     <div class="form-text">
-                        <span id="captchaStatus">请输入图形验证码，点击图片可刷新</span>
+                        <span id="captchaStatus">请输入4位数字验证码，点击图片可刷新</span>
                     </div>
                 </div>
 
@@ -232,7 +232,7 @@
                         </button>
                     </div>
                     <div class="form-text">
-                        <span id="codeStatus">请先验证图形验证码</span>
+                        <span id="codeStatus">请先验证数字验证码</span>
                     </div>
                 </div>
 
@@ -313,15 +313,15 @@
 
                 if (result.success) {
                     captchaImage.src = result.captcha_image;
-                    captchaStatus.textContent = '请输入图形验证码，点击图片可刷新';
+                    captchaStatus.textContent = '请输入4位数字验证码，点击图片可刷新';
                     captchaVerified = false;
                     updateSendCodeButton();
                 } else {
-                    captchaStatus.textContent = '图形验证码加载失败，请刷新页面重试';
+                    captchaStatus.textContent = '数字验证码加载失败，请刷新页面重试';
                 }
             } catch (error) {
-                console.error('加载图形验证码失败:', error);
-                captchaStatus.textContent = '图形验证码加载失败，请检查网络连接';
+                console.error('加载数字验证码失败:', error);
+                captchaStatus.textContent = '数字验证码加载失败，请检查网络连接';
             } finally {
                 captchaLoading.style.display = 'none';
                 captchaImage.style.display = 'block';
@@ -339,9 +339,15 @@
             const captchaStatus = document.getElementById('captchaStatus');
 
             if (!captchaCode) {
-                captchaStatus.textContent = '请输入图形验证码';
+                captchaStatus.textContent = '请输入4位数字验证码';
                 captchaVerified = false;
                 updateSendCodeButton();
+                return;
+            }
+
+            if (!/^\d{4}$/.test(captchaCode)) {
+                captchaStatus.innerHTML = '<span style="color: red;">请输入4位数字验证码</span>';
+                captchaVerified = false;
                 return;
             }
 
@@ -360,18 +366,18 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    captchaStatus.innerHTML = '<span style="color: green;">✓ 图形验证码验证成功</span>';
+                    captchaStatus.innerHTML = '<span style="color: green;">✓ 数字验证码验证成功</span>';
                     captchaVerified = true;
                 } else {
-                    captchaStatus.innerHTML = '<span style="color: red;">✗ 图形验证码错误，请重新输入</span>';
+                    captchaStatus.innerHTML = '<span style="color: red;">✗ 数字验证码错误，请重新输入</span>';
                     captchaVerified = false;
-                    refreshCaptcha(); // 自动刷新验证码
+                    refreshCaptcha();
                 }
 
                 updateSendCodeButton();
 
             } catch (error) {
-                console.error('验证图形验证码失败:', error);
+                console.error('验证数字验证码失败:', error);
                 captchaStatus.innerHTML = '<span style="color: red;">验证失败，请检查网络连接</span>';
                 captchaVerified = false;
                 updateSendCodeButton();
@@ -385,11 +391,11 @@
 
             if (captchaVerified && email && validateEmail(email)) {
                 sendCodeBtn.disabled = false;
-                codeStatus.textContent = '图形验证码已验证，可以发送邮箱验证码';
+                codeStatus.textContent = '数字验证码已验证，可以发送邮箱验证码';
             } else {
                 sendCodeBtn.disabled = true;
                 if (!captchaVerified) {
-                    codeStatus.textContent = '请先验证图形验证码';
+                    codeStatus.textContent = '请先验证数字验证码';
                 } else if (!email) {
                     codeStatus.textContent = '请先输入邮箱地址';
                 } else if (!validateEmail(email)) {
@@ -423,7 +429,7 @@
             const email = document.getElementById('email').value.trim();
 
             if (!captchaVerified) {
-                showAlert('请先验证图形验证码');
+                showAlert('请先验证数字验证码');
                 return;
             }
 
@@ -476,7 +482,7 @@
 
             // 前端验证
             if (!captchaVerified) {
-                showAlert('请先验证图形验证码');
+                showAlert('请先验证数字验证码');
                 return;
             }
             if (username.length < 3 || username.length > 20) {
@@ -544,14 +550,15 @@
             loadCaptcha();
         });
 
-        // 图形验证码输入框事件
+        // 数字验证码输入框事件
         document.getElementById('captchaCode').addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '');
             if (this.value.length === 4) {
                 verifyCaptcha();
             } else {
                 captchaVerified = false;
                 updateSendCodeButton();
-                document.getElementById('captchaStatus').textContent = '请输入4位图形验证码';
+                document.getElementById('captchaStatus').textContent = '请输入4位数字验证码';
             }
         });
 

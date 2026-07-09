@@ -15,6 +15,15 @@ services:
       - ./data:/app/data:rw
       - ./logs:/app/logs:rw
       - ./global_config.yml:/app/global_config.yml:ro
+      # 代码文件挂载（修改后自动同步，无需重建镜像）
+      - ./static:/app/static:rw
+      - ./utils:/app/utils:rw
+      - ./db_manager.py:/app/db_manager.py:rw
+      - ./reply_server.py:/app/reply_server.py:rw
+      - ./config.py:/app/config.py:rw
+      - ./cookie_manager.py:/app/cookie_manager.py:rw
+      - ./ai_reply_engine.py:/app/ai_reply_engine.py:rw
+      - ./file_log_collector.py:/app/file_log_collector.py:rw
       # 可选：如果需要自定义配置
       # - ./custom_config.yml:/app/global_config.yml:ro
       # 可选：备份目录
